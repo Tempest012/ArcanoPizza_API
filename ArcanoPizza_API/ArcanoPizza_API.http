@@ -1,0 +1,6 @@
+@ArcanoPizza_API_HostAddress = http://localhost:5010
+
+GET {{ArcanoPizza_API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
