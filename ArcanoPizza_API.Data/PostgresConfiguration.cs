@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace ArcanoPizza_API.Data;
 
-public static class SqlServerConfiguration
+public static class PostgresConfiguration
 {
     public static IServiceCollection AddData(this IServiceCollection services, IConfiguration configuration)
     {
@@ -21,7 +21,7 @@ public static class SqlServerConfiguration
         services.AddDbContext<ArcanoPizzaDbContext>(options =>
             options.UseNpgsql(npgsqlConnectionString));
 
-        services.AddScoped<IProductoRepository, ProductoRepository>();
+        services.AddScoped<IExtraRepository, ExtraRepository>();
 
         return services;
     }
