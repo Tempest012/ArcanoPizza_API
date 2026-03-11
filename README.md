@@ -1,3 +1,31 @@
+# ArcanoPizza API
+
+> API REST para un sistema de pedidos de pizza. Construida con .NET y PostgreSQL.
+
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dot.net)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+
+---
+
+## Inicio rápido
+
+```bash
+# 1. Restaurar paquetes
+dotnet restore
+
+# 2. Configurar la cadena de conexión (User Secrets)
+cd ArcanoPizza_API
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "postgresql://USER:PASS@HOST:5432/DB?sslmode=require"
+
+# 3. Aplicar migraciones (si es la primera vez)
+dotnet ef database update --project ArcanoPizza_API.Data --startup-project ArcanoPizza_API
+
+# 4. Ejecutar la API
+dotnet run --project ArcanoPizza_API
+```
+
+---
+
 # ArcanoPizza API — Guía de arquitectura y uso
 
 Este documento explica cómo está organizado el proyecto, qué hace cada parte y cómo ponerlo en marcha. Está pensado para personas que llegan nuevas al proyecto.
@@ -87,7 +115,7 @@ Ejemplo: el cliente hace `GET /api/Extras` para obtener todos los extras.
 | Archivo/Carpeta | Descripción |
 |-----------------|-------------|
 | `ArcanoPizza_API.slnx` | Archivo de solución: lista de proyectos que forman la aplicación. |
-| `ARQUITECTURA.md` | Este documento. |
+| `README.md` | Este documento. |
 | `ArcanoPizza_API/` | Proyecto principal (API web). |
 | `ArcanoPizza_API.Data/` | Proyecto de acceso a datos. |
 | `ArcanoPizza_API.Model/` | Proyecto de entidades. |
@@ -160,29 +188,29 @@ Usar DTOs en lugar de entidades evita exponer la estructura interna de la BD y p
 
 La API necesita una **cadena de conexión** para conectar con PostgreSQL. Por seguridad, no debe subirse a Git.
 
-### Origen de la cadena (en este orden)
+**User Secrets** (clave `ConnectionStrings:DefaultConnection`).
 
-1. **Variable de entorno `DATABASE_URL`** (recomendado).
-2. **User Secrets** (clave `ConnectionStrings:DefaultConnection`).
-3. **`appsettings.json`** (solo para desarrollo local, sin credenciales reales en Git).
+Paso 1: Abrir la terminal en la raíz del proyecto
 
-### Opción recomendada: User Secrets
+Paso 2: Ir al proyecto de la API
+cd C:\ProyectosJP\arcanoPizza\ArcanoPizza_API
 
- Cada desarrollador configura sus propios secretos en su máquina:
+Paso 3: Inicializar User Secrets
+dotnet user-secrets init
+Se añadirá un UserSecretsId en el .csproj y se creará la carpeta para los secretos.
 
-```powershell
-# Desde la raíz del repositorio
-dotnet user-secrets init --project ArcanoPizza_API
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "postgresql://usuario:password@host:5432/nombre_db?sslmode=require" --project ArcanoPizza_API
-```
+Paso 4: Guardar la cadena de conexión
+Sustituye con tu cadena real de PostgreSQL:
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "postgresql://TU_USUARIO:TU_PASSWORD@TU_HOST:5432/TU_BASE_DE_DATOS?sslmode=require"
 
-Reemplaza `usuario`, `password`, `host` y `nombre_db` con tus datos.
+Paso 5: Comprobar que se guardó
+dotnet user-secrets list
+Deberías ver algo como:
+ConnectionStrings:DefaultConnection = postgresql://...
 
-### Alternativa: variable de entorno (PowerShell)
+Paso 6: Ejecutar la API
 
-```powershell
-$env:DATABASE_URL = "postgresql://usuario:password@host:5432/nombre_db?sslmode=require"
-```
+
 
 ---
 
