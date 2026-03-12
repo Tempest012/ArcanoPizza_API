@@ -26,6 +26,103 @@ dotnet run --project ArcanoPizza_API
 
 ---
 
+## Workflow de desarrollo
+
+### Flujo de ramas (Git Flow simplificado)
+
+| Rama | Propósito |
+|------|-----------|
+| `main` | Producción estable. Solo recibe merges desde `develop` tras release. |
+| `develop` | Integración. Rama base para features y fixes. |
+| `feature/*` | Nuevas funcionalidades. Ej: `feature/crud-productos`, `feature/login-jwt`. |
+| `fix/*` | Correcciones de bugs. Ej: `fix/validacion-precio`. |
+| `release/*` | Preparación de releases. Solo fixes menores antes de producción. |
+
+### Ciclo típico de un cambio
+
+1. **Crear rama** desde `develop`:
+   ```bash
+   git checkout develop
+   git pull origin develop  # Siempre trabajar a partir de develop nunca de main
+   git checkout -b feature/nombre-descriptivo 
+   ```
+
+2. **Desarrollar** y hacer commits pequeños y descriptivos.
+
+3. **Asegurar calidad** antes de push:
+   ```bash
+   dotnet build
+   dotnet ef database update --project ArcanoPizza_API.Data --startup-project ArcanoPizza_API  # si hay migraciones
+   ```
+
+4. **Push y Pull Request** a `develop`:
+   ```bash
+   git push origin feature/nombre-descriptivo
+   ```
+   Crear PR con descripción, referencias a issues si aplica, y checklist: compila, sin credenciales, migraciones revisadas.
+
+5. **Merge** 
+
+6. **Eliminar rama** tras el merge (ver más abajo).
+
+### Cómo eliminar una rama
+
+**Eliminar rama local** (debes estar en otra rama):
+
+```bash
+git checkout develop
+git branch -d feature/nombre-descriptivo    # Elimina si ya fue mergeada
+git branch -D feature/nombre-descriptivo   # Fuerza eliminación (aunque no esté mergeada)
+```
+
+**Eliminar rama remota**:
+
+```bash
+git push origin --delete feature/nombre-descriptivo
+```
+
+**Limpiar referencias a ramas remotas eliminadas**:
+
+```bash
+git fetch --prune
+```
+
+---
+
+## Convenciones de commits
+
+Usamos [Conventional Commits](https://www.conventionalcommits.org/) para un historial claro:
+
+| Prefijo | Uso | Ejemplo |
+|---------|-----|---------|
+| `feat:` | Nueva funcionalidad | `feat: add CRUD Extras endpoint` |
+| `fix:` | Corrección de bug | `fix: validación de precio en ExtraCreateDto` |
+| `docs:` | Solo documentación | `docs: update README con workflow` |
+| `refactor:` | Código sin cambiar comportamiento | `refactor: extract validation to separate class` |
+| `test:` | Tests | `test: add ExtrasController unit tests` |
+| `chore:` | Mantenimiento, dependencias | `chore: upgrade EF Core to 8.0.12` |
+| `security:` | Cambios de seguridad | `security: add rate limiting to auth endpoints` |
+
+**Formato:** `tipo(ámbito): descripción` — Ej: `feat(extras): add PUT endpoint for updating extras`
+
+---
+
+## Workflow de migraciones
+
+1. **Crear migración** tras cambios en el modelo:
+   ```bash
+   dotnet ef migrations add NombreDescriptivo --project ArcanoPizza_API.Data --startup-project ArcanoPizza_API
+   ```
+
+2. **Revisar** el código generado en `Migrations/` antes de commitear.
+
+3. **Aplicar** en desarrollo:
+   ```bash
+   dotnet ef database update --project ArcanoPizza_API.Data --startup-project ArcanoPizza_API
+   ```
+
+---
+
 # ArcanoPizza API — Guía de arquitectura y uso
 
 Este documento explica cómo está organizado el proyecto, qué hace cada parte y cómo ponerlo en marcha. Está pensado para personas que llegan nuevas al proyecto.
@@ -245,13 +342,63 @@ dotnet ef database update --project ArcanoPizza_API.Data --startup-project Arcan
 
 ## Convenciones del proyecto
 
-| Convención | Descripción |
-|------------|-------------|
+### Código y arquitectura
+
+| Área | Convención |
+|------|------------|
 | **No versionar secretos** | Usar User Secrets o `DATABASE_URL`; nunca credenciales en `appsettings.json` subido a Git. |
-| **Controllers** | Se encargan de HTTP, validación básica y mapeo entre DTOs y entidades. |
+| **Controllers** | Solo HTTP: routing, validación básica y mapeo DTO ↔ entidad. |
 | **Repositories** | Todo el acceso a datos pasa por repositorios; los controllers no usan DbContext directamente. |
+| **DTOs** | Nunca exponer entidades. Siempre mapear a DTOs de request/response. |
 | **Fechas** | Usar `DateTime.UtcNow` para consistencia. |
-| **DTOs** | La API no expone entidades directamente; siempre mapear a DTOs. |
+| **Async** | Métodos que hacen I/O usan `async/await` y reciben `CancellationToken` donde aplique. |
+
+### Convenciones de código (C#)
+
+| Elemento | Formato | Ejemplo |
+|----------|---------|---------|
+| **Variables locales** | camelCase | `var extras = ...`, `var created = ...` |
+| **Parámetros** | camelCase | `(int id, CancellationToken ct)`, `(ExtraCreateDto dto)` |
+| **Campos privados** | _camelCase | `private readonly IExtraRepository _extraRepository` |
+| **Constantes** | PascalCase o UPPER_SNAKE_CASE | `MaxRetries = 3`, `DEFAULT_TIMEOUT` |
+| **Clases** | PascalCase | `ExtrasController`, `ExtraRepository` |
+| **Interfaces** | I + PascalCase | `IExtraRepository`, `IRepository<T>` |
+| **Métodos** | PascalCase | `GetAllAsync`, `GetByIdAsync`, `AddAsync` |
+| **Propiedades** | PascalCase | `IdExtra`, `Nombre`, `PrecioBase` |
+| **Namespaces** | PascalCase (proyecto.Carpeta) | `ArcanoPizza_API.Controllers` |
+| **Archivos** | Mismo nombre que la clase principal | `ExtrasController.cs`, `ExtraRepository.cs` |
+
+**Otros:**
+
+- **CancellationToken**: usar el parámetro `ct` para abreviar.
+- **Booleans**: prefijo `Is`, `Has` o `Can` cuando aporte claridad — `IsActive`, `HasItems`.
+- **Colecciones**: plural cuando sea una lista — `extras`, `productos`, `PedidosItem`.
+- **Evitar abreviaciones** salvo las muy comunes (id, ct, dto, etc.).
+- **Idioma**: propiedades y entidades en español cuando el dominio lo sea; código interno (variables, métodos) puede ir en inglés o español de forma consistente.
+
+### Nomenclatura (Git y API)
+
+| Elemento | Formato | Ejemplo |
+|----------|---------|---------|
+| Ramas | `tipo/descripcion-kebab-case` | `feature/crud-productos`, `fix/validacion-precio` |
+| Commits | `tipo(ámbito): descripción` | `feat(extras): add PATCH support` |
+| Controllers | `{Entidad}Controller` | `ExtrasController` |
+| DTOs | `{Entidad}{Create,Update,Response}Dto` | `ExtraCreateDto`, `ExtraResponseDto` |
+| Repositories | `I{Entidad}Repository` / `{Entidad}Repository` | `IExtraRepository`, `ExtraRepository` |
+| Rutas API | `/api/{Entidad}` | `/api/Extras` |
+
+### Estilo de código
+
+- **Llaves**: llave de apertura en la misma línea que la declaración.
+- **Indentación**: 4 espacios.
+- **Línea en blanco** antes de `return` cuando hay varias líneas de lógica.
+- **Orden de miembros** en clases: campos → constructor → métodos públicos → métodos privados.
+
+### Antes de hacer commit
+
+- [ ] `dotnet build` sin errores
+- [ ] Sin credenciales ni datos sensibles en el código
+- [ ] Mensaje de commit descriptivo (preferiblemente Conventional Commits)
 
 ---
 
