@@ -1,16 +1,32 @@
 using ArcanoPizza_API.Data;
+using ArcanoPizza_API.Extensions;
+using ArcanoPizza_API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddData(builder.Configuration);
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// OWASP Top 10: seguridad
+builder.Services.AddSecurity(builder.Configuration);
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// OWASP A02: Cabeceras de seguridad
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+if (app.Environment.IsProduction())
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseRateLimiter();
+app.UseExceptionHandler(_ => { }); // Usa GlobalExceptionHandlerMiddleware
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -20,8 +36,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

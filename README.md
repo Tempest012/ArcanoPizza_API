@@ -255,6 +255,31 @@ dotnet ef database update --project ArcanoPizza_API.Data --startup-project Arcan
 
 ---
 
+## Seguridad: OWASP Top 10:2025
+
+La API aplica medidas para cubrir las vulnerabilidades del [OWASP Top 10:2025](https://owasp.org/Top10/2025/):
+
+| Categoría OWASP | Medidas implementadas |
+|-----------------|------------------------|
+| **A01 - Broken Access Control** | Estructura JWT configurada. Aplicar `[Authorize]` en endpoints sensibles cuando el login esté implementado. |
+| **A02 - Security Misconfiguration** | Cabeceras de seguridad (X-Frame-Options, X-Content-Type-Options, CSP, HSTS), Swagger solo en desarrollo. |
+| **A03 - Software Supply Chain** | Usar paquetes NuGet oficiales, mantener dependencias actualizadas, revisar alertas de Dependabot. |
+| **A04 - Cryptographic Failures** | HTTPS forzado, `sslmode=require` en PostgreSQL. Para contraseñas: usar bcrypt/Argon2 (pendiente en módulo Usuario). |
+| **A05 - Injection** | EF Core con consultas parametrizadas, validación en DTOs (`[Required]`, `[MaxLength]`, `[Range]`), rate limiting. |
+| **A06 - Insecure Design** | Arquitectura en capas, separación API/Data/Model/DTOs, principio de mínimo privilegio. |
+| **A07 - Authentication Failures** | JWT preparado (activar con `Jwt:Key`). Rate limiting en endpoints de auth. |
+| **A08 - Software/Data Integrity** | No usar scripts o paquetes sin firmar. Configurar verificación de integridad en CI/CD. |
+| **A09 - Security Logging** | Excepciones logueadas con `TraceId` sin datos sensibles. Extensible a auditoría de accesos. |
+| **A10 - Mishandling of Exceptions** | Manejador global de excepciones: respuestas genéricas en producción, sin stack traces al cliente. |
+
+### Configurar JWT (cuando implementes login)
+
+```bash
+dotnet user-secrets set "Jwt:Key" "tu-clave-secreta-de-al-menos-32-caracteres"
+```
+
+---
+
 ## Glosario rápido
 
 - **CRUD**: Create, Read, Update, Delete (crear, leer, actualizar, eliminar).
