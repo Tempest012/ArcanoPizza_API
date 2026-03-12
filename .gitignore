@@ -261,7 +261,7 @@ UpgradeLog*.htm
 ServiceFabricBackup/
 *.rptproj.bak
 
-# SQL Server files
+# Database data files
 *.mdf
 *.ldf
 *.ndf
@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Secrets (no versionar credenciales)
+.env
+.env.*
+appsettings.*.json
+!appsettings.json

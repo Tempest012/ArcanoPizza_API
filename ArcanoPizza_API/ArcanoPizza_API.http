@@ -1,6 +1,36 @@
 @ArcanoPizza_API_HostAddress = http://localhost:5010
 
-GET {{ArcanoPizza_API_HostAddress}}/weatherforecast/
+### ========== EXTRAS ==========
+
+### LISTAR TODOS LOS EXTRAS
+GET {{ArcanoPizza_API_HostAddress}}/api/Extras
 Accept: application/json
+
+### OBTENER EXTRA POR ID
+GET {{ArcanoPizza_API_HostAddress}}/api/Extras/1
+Accept: application/json
+
+### CREAR EXTRA
+POST {{ArcanoPizza_API_HostAddress}}/api/Extras
+Content-Type: application/json
+
+{
+  "nombre": "Extra queso",
+  "precio": 2.50,
+  "activo": true
+}
+
+### ACTUALIZAR EXTRA
+PUT {{ArcanoPizza_API_HostAddress}}/api/Extras/1
+Content-Type: application/json
+
+{
+  "nombre": "Extra queso doble",
+  "precio": 3.00,
+  "activo": true
+}
+
+### ELIMINAR EXTRA
+DELETE {{ArcanoPizza_API_HostAddress}}/api/Extras/1
 
 ###
