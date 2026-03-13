@@ -293,15 +293,18 @@ Paso 2: Ir al proyecto de la API
 cd C:\ProyectosJP\arcanoPizza\ArcanoPizza_API
 
 Paso 3: Inicializar User Secrets
-dotnet user-secrets init
+
+**dotnet user-secrets init**
 Se añadirá un UserSecretsId en el .csproj y se creará la carpeta para los secretos.
 
 Paso 4: Guardar la cadena de conexión
 Sustituye con tu cadena real de PostgreSQL:
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "postgresql://TU_USUARIO:TU_PASSWORD@TU_HOST:5432/TU_BASE_DE_DATOS?sslmode=require"
+
+**dotnet user-secrets set "ConnectionStrings:DefaultConnection" "postgresql://TU_USUARIO:TU_PASSWORD@TU_HOST:5432/TU_BASE_DE_DATOS?sslmode=require"**
 
 Paso 5: Comprobar que se guardó
-dotnet user-secrets list
+
+**dotnet user-secrets list**
 Deberías ver algo como:
 ConnectionStrings:DefaultConnection = postgresql://...
 
