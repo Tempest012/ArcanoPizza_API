@@ -38,12 +38,47 @@ Persistir para tu usuario (Windows):
 setx DATABASE_URL "postgresql://usuario:password@host/db?sslmode=require"
 ```
 
-## Cómo ejecutar (cuando tengas .NET 10)
+## Autenticación (JWT y refresh token)
 
-Requisitos:
+La API expone registro, login, renovación de sesión y cierre de sesión en `AuthController`. El **access token** es un JWT de corta duración; el **refresh token** es opaco, se guarda hasheado (SHA-256 en hex) en la tabla `refresh_tokens` y se rota en cada `POST /api/auth/refresh`.
 
-- **.NET SDK 10** instalado (los proyectos apuntan a `net10.0`).
-- Acceso a PostgreSQL (por ejemplo Neon) y `DATABASE_URL` configurada.
+### Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/auth/register` | Alta de usuario (rol por defecto `Cliente`). Correo único, normalizado a minúsculas. |
+| `POST` | `/api/auth/login` | Devuelve JWT + refresh token. |
+| `POST` | `/api/auth/refresh` | Body: `{ "refreshToken": "..." }`. Revoca el refresh usado y devuelve par nuevo (rotación). |
+| `POST` | `/api/auth/logout` | Body: `{ "refreshToken": "..." }`. Revoca ese refresh si sigue activo. |
+
+Login y refresh fallidos responden **401** sin distinguir motivo. Registro con correo duplicado: **409**.
+
+Para proteger un controller o acción, usa `[Authorize]` (el esquema por defecto es Bearer JWT).
+
+### Configuración JWT
+
+Opciones en la sección **`Jwt`** de configuración (también vía variables de entorno con el prefijo estándar de .NET, por ejemplo `Jwt__SigningKey` o `JWT__SigningKey` según el host):
+
+| Clave | Descripción |
+|-------|-------------|
+| `Issuer` | Emisor del JWT. |
+| `Audience` | Audiencia esperada. |
+| `SigningKey` | Secreto HMAC-SHA256; **mínimo 32 caracteres**. |
+| `AccessTokenMinutes` | Vida del access token (p. ej. 30). |
+| `RefreshTokenDays` | Vida del refresh token (p. ej. 14). |
+
+Ejemplo (PowerShell) para sobrescribir solo la clave en la sesión:
+
+```powershell
+$env:Jwt__SigningKey = "tu_clave_secreta_de_al_menos_32_caracteres"
+```
+
+Cambios de esquema `PasswordHash` en `usuarios`, índice único en `Correo` y tabla `refresh_tokens`:
+
+```bash
+dotnet ef database update --project ArcanoPizza_API.Data --startup-project ArcanoPizza_API
+```
+
 
 Comandos típicos:
 
@@ -73,7 +108,9 @@ Contenido típico:
   - Registra dependencias con `builder.Services.AddData(builder.Configuration)`.
   - Habilita Controllers y OpenAPI en desarrollo.
 - **`Controllers/`**
-  - Endpoints HTTP. Ejemplo: `ProductosController` expone CRUD de productos.
+  - Endpoints HTTP. Ejemplo: `ProductosController` (CRUD de productos), `AuthController` (registro, login, refresh, logout).
+- **`Options/`**, **`Services/`**
+  - Opciones validadas (`JwtOptions`) y emisión de JWT (`JwtTokenService`).
 - **`appsettings.json`**
   - Configuración base. `DefaultConnection` está vacío por seguridad; se recomienda `DATABASE_URL`.
 - **`appsettings.Development.json`**
@@ -97,8 +134,9 @@ Carpetas principales:
   - Implementaciones de repositorios.
   - `Repository<T>` es un repositorio genérico (GetById/GetAll/Find/Add/Update/Delete).
   - `ProductoRepository` es un repositorio concreto para `Producto`.
+  - `UsuarioRepository` / `RefreshTokenRepository` para autenticación.
 - **`Interface/`**
-  - Contratos de repositorios (`IRepository<T>`, `IProductoRepository`).
+  - Contratos de repositorios (`IRepository<T>`, `IProductoRepository`, `IUsuarioRepository`, `IRefreshTokenRepository`).
 - **`Helpers/`**
   - Utilidades compartidas de la capa Data.
   - Actualmente contiene `.gitkeep` (carpeta reservada para helpers futuros).

@@ -9,6 +9,7 @@ public class ArcanoPizzaDbContext : DbContext
         : base(options) { }
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Direccion> Direcciones => Set<Direccion>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
     public DbSet<Pago> Pagos => Set<Pago>();
@@ -30,8 +31,23 @@ public class ArcanoPizzaDbContext : DbContext
             e.HasKey(x => x.IdUsuario);
             e.Property(x => x.NombreUsuario).HasMaxLength(100).IsRequired();
             e.Property(x => x.Correo).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => x.Correo).IsUnique();
+            e.Property(x => x.PasswordHash).HasMaxLength(500);
             e.Property(x => x.Telefono).HasMaxLength(20);
             e.Property(x => x.Rol).HasMaxLength(50).IsRequired();
+        });
+
+        modelBuilder.Entity<RefreshToken>(e =>
+        {
+            e.ToTable("refresh_tokens");
+            e.HasKey(x => x.IdRefreshToken);
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ReplacedByTokenHash).HasMaxLength(64);
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasOne(x => x.Usuario)
+                .WithMany(u => u.RefreshTokens)
+                .HasForeignKey(x => x.FkIdUsuario)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // direcciones

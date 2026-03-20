@@ -10,6 +10,8 @@ public static class SqlServerConfiguration
 {
     public static IServiceCollection AddData(this IServiceCollection services, IConfiguration configuration)
     {
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
         var connectionString =
             Environment.GetEnvironmentVariable("DATABASE_URL")
             ?? configuration.GetConnectionString("DefaultConnection")
@@ -22,6 +24,8 @@ public static class SqlServerConfiguration
             options.UseNpgsql(npgsqlConnectionString));
 
         services.AddScoped<IProductoRepository, ProductoRepository>();
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         return services;
     }
