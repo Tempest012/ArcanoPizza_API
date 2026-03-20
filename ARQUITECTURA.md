@@ -22,7 +22,7 @@ La aplicación toma la cadena de conexión en este orden:
 1. Variable de entorno **`DATABASE_URL`** (recomendado para no versionar secretos).
 2. `ConnectionStrings:DefaultConnection` en `appsettings.json` (debe evitarse con credenciales reales).
 
-La integración está en `ArcanoPizza_API.Data/SqlServerConfiguration.cs` (el nombre histórico se mantiene, pero ya usa PostgreSQL/Npgsql).
+La integración está en `ArcanoPizza_API.Data/PostgresConfiguration.cs` (registro de `DbContext`, Npgsql y repositorios).
 
 ### Ejemplo (PowerShell)
 
@@ -105,10 +105,12 @@ Contenido típico:
 
 - **`Program.cs`**
   - Construye la app (`WebApplication.CreateBuilder`).
-  - Registra dependencias con `builder.Services.AddData(builder.Configuration)`.
-  - Habilita Controllers y OpenAPI en desarrollo.
+  - Registra dependencias con `builder.Services.AddData(builder.Configuration)` y `AddSecurity` (rate limiting, manejo de excepciones, HSTS).
+  - JWT con `JwtOptions` validadas; en desarrollo, OpenAPI y Swagger UI.
 - **`Controllers/`**
-  - Endpoints HTTP. Ejemplo: `ProductosController` (CRUD de productos), `AuthController` (registro, login, refresh, logout).
+  - Endpoints HTTP. Ejemplo: `ExtrasController` (CRUD de extras), `AuthController` (registro, login, refresh, logout).
+- **`Extensions/`**, **`Middleware/`**
+  - `ServiceCollectionExtensions` (OWASP: límites de petición, antiforgery); cabeceras de seguridad y manejador global de excepciones.
 - **`Options/`**, **`Services/`**
   - Opciones validadas (`JwtOptions`) y emisión de JWT (`JwtTokenService`).
 - **`appsettings.json`**
@@ -116,10 +118,10 @@ Contenido típico:
 - **`appsettings.Development.json`**
   - Configuración solo para desarrollo (logging, etc.).
 
-### Ejemplo de flujo real (Productos)
+### Ejemplo de flujo real (Extras)
 
-- `ProductosController` depende de `IProductoRepository`.
-- La implementación `ProductoRepository` hereda de `Repository<Producto>`.
+- `ExtrasController` depende de `IExtraRepository`.
+- La implementación `ExtraRepository` hereda de `Repository<Extra>`.
 - `Repository<T>` opera con `DbSet<T>` y persiste con `SaveChangesAsync`.
 
 Esto mantiene el controller enfocado en HTTP/DTOs y la capa Data enfocada en acceso a datos.
@@ -133,10 +135,10 @@ Carpetas principales:
 - **`Repositories/`**
   - Implementaciones de repositorios.
   - `Repository<T>` es un repositorio genérico (GetById/GetAll/Find/Add/Update/Delete).
-  - `ProductoRepository` es un repositorio concreto para `Producto`.
+  - `ExtraRepository` es un repositorio concreto para `Extra`.
   - `UsuarioRepository` / `RefreshTokenRepository` para autenticación.
 - **`Interface/`**
-  - Contratos de repositorios (`IRepository<T>`, `IProductoRepository`, `IUsuarioRepository`, `IRefreshTokenRepository`).
+  - Contratos de repositorios (`IRepository<T>`, `IExtraRepository`, `IUsuarioRepository`, `IRefreshTokenRepository`).
 - **`Helpers/`**
   - Utilidades compartidas de la capa Data.
   - Actualmente contiene `.gitkeep` (carpeta reservada para helpers futuros).
@@ -151,7 +153,7 @@ Archivos clave:
 
 - **`ArcanoPizzaDbContext.cs`**
   - Define `DbSet<>` y el mapeo (tablas, longitudes, precision, relaciones).
-- **`SqlServerConfiguration.cs`**
+- **`PostgresConfiguration.cs`**
   - Registra `ArcanoPizzaDbContext` con `UseNpgsql(...)`.
   - Toma la cadena desde `DATABASE_URL` o `DefaultConnection`.
 - **`PostgresConnectionString.cs`**

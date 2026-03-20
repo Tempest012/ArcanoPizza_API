@@ -1,8 +1,10 @@
 using System.Text;
 using ArcanoPizza_API.Data;
+using ArcanoPizza_API.Extensions;
+using ArcanoPizza_API.Middleware;
+using ArcanoPizza_API.Model;
 using ArcanoPizza_API.Options;
 using ArcanoPizza_API.Services;
-using ArcanoPizza_API.Model;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -44,14 +46,29 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+builder.Services.AddSecurity(builder.Configuration);
+
 var app = builder.Build();
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+if (app.Environment.IsProduction())
+{
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseRateLimiter();
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "ArcanoPizza API v1");
+    });
 }
-
-app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
