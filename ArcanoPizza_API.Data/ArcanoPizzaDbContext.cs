@@ -115,6 +115,8 @@ public class ArcanoPizzaDbContext : DbContext
             e.HasKey(x => x.IdProducto);
             e.Property(x => x.Nombre).HasMaxLength(150).IsRequired();
             e.Property(x => x.Descripcion).HasMaxLength(500);
+            e.Property(x => x.Ingredientes).HasMaxLength(1000);
+            e.Property(x => x.ImagenURL).HasMaxLength(2048);
             e.Property(x => x.PrecioBase).HasPrecision(10, 2);
             e.HasOne(x => x.Categoria)
                 .WithMany(c => c.Productos)
