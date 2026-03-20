@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
     {
         // A09: Security Logging - Exception handler con logging estructurado
         services.AddExceptionHandler<GlobalExceptionHandlerMiddleware>();
+        services.AddProblemDetails();
 
         // A02: Security Misconfiguration
         services.AddAntiforgery();
