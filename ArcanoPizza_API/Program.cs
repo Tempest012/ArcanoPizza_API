@@ -1,5 +1,6 @@
-using System.Text;
 using ArcanoPizza_API.Data;
+using ArcanoPizza_API.Data.Interface;
+using ArcanoPizza_API.Data.Repositories;
 using ArcanoPizza_API.Extensions;
 using ArcanoPizza_API.Middleware;
 using ArcanoPizza_API.Model;
@@ -9,10 +10,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddData(builder.Configuration);
+builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
