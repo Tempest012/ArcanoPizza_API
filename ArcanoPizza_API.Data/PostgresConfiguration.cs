@@ -50,6 +50,8 @@ public static class PostgresConfiguration
 
         services.AddScoped<IExtraRepository, ExtraRepository>();
 
+        services.AddScoped<IPromocionRepository, PromocionRepository>();
+
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
