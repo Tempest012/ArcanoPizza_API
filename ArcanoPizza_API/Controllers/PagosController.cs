@@ -59,8 +59,8 @@ namespace ArcanoPizza_API.Controllers
                 LineItems = lineItems,
                 Mode = "payment",
                 // Si tu Angular corre en otro puerto (ej. 4200), asegúrate de que esto coincida
-                SuccessUrl = "http://localhost:4200/pago-exitoso",
-                CancelUrl = "http://localhost:4200/carrito-compra",
+                SuccessUrl = "http://localhost:4200/pago-exito",
+                CancelUrl = "http://localhost:4200/pago-cancelado",
             };
 
             var service = new SessionService();
