@@ -3,6 +3,7 @@ using System;
 using ArcanoPizza_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanoPizza_API.Data.Migrations
 {
     [DbContext(typeof(ArcanoPizzaDbContext))]
-    partial class ArcanoPizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322184040_PromocionesYDescuentosPedido")]
+    partial class PromocionesYDescuentosPedido
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -344,10 +347,6 @@ namespace ArcanoPizza_API.Data.Migrations
 
                     b.Property<bool>("Activo")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("Contenido")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");

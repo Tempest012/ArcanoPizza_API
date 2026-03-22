@@ -1,0 +1,8 @@
+{
+  "nota": "Documentación detallada: promociones-documentacion.json (JSON). Mismo contenido integrado en el lienzo promociones-arcano.excalidraw (Parte 2).",
+  "archivos": {
+    "diagrama_y_doc_unificados": "promociones-arcano.excalidraw",
+    "solo_json_maquina": "promociones-documentacion.json",
+    "seed_sql": "seed_promociones.sql"
+  }
+}
