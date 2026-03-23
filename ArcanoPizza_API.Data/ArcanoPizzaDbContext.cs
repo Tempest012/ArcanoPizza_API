@@ -82,7 +82,6 @@ public class ArcanoPizzaDbContext : DbContext
             e.Property(x => x.ImagenURL).HasMaxLength(2048);
             e.Property(x => x.PrecioOriginal).HasPrecision(10, 2);
             e.Property(x => x.PrecioPromocional).HasPrecision(10, 2);
-            e.Property(x => x.PorcentajeDescuento).HasPrecision(5, 2);
             e.Property(x => x.TipoVigencia).HasConversion<int>();
             e.HasIndex(x => x.Activo);
         });
