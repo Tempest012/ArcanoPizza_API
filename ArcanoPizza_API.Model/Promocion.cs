@@ -17,10 +17,8 @@ public class Promocion
     public decimal PrecioOriginal { get; set; }
 
     /// <summary>Precio con promoción aplicada.</summary>
+    /// <remarks>El ahorro en pesos es <c>PrecioOriginal - PrecioPromocional</c> (expuesto como <c>ahorroMonto</c> en la API).</remarks>
     public decimal PrecioPromocional { get; set; }
-
-    /// <summary>Porcentaje de descuento mostrado (ej. 20 para -20%). Opcional si solo se usan precios.</summary>
-    public decimal? PorcentajeDescuento { get; set; }
 
     public TipoVigenciaPromocion TipoVigencia { get; set; }
 

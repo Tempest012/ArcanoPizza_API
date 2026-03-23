@@ -55,7 +55,6 @@ public class PromocionesController : ControllerBase
             ImagenURL = dto.ImagenURL,
             PrecioOriginal = dto.PrecioOriginal,
             PrecioPromocional = dto.PrecioPromocional,
-            PorcentajeDescuento = dto.PorcentajeDescuento,
             TipoVigencia = tipo,
             FechaValidaHasta = tipo == TipoVigenciaPromocion.FechaHasta ? dto.FechaValidaHasta : null,
             DiaSemanaRecurrente = tipo == TipoVigenciaPromocion.DiaSemanaRecurrente ? dto.DiaSemanaRecurrente : null,
@@ -96,7 +95,6 @@ public class PromocionesController : ControllerBase
         if (dto.ImagenURL is not null) p.ImagenURL = dto.ImagenURL;
         if (dto.PrecioOriginal.HasValue) p.PrecioOriginal = dto.PrecioOriginal.Value;
         if (dto.PrecioPromocional.HasValue) p.PrecioPromocional = dto.PrecioPromocional.Value;
-        if (dto.PorcentajeDescuento.HasValue) p.PorcentajeDescuento = dto.PorcentajeDescuento.Value;
 
         if (dto.TipoVigencia.HasValue)
         {
@@ -137,7 +135,6 @@ public class PromocionesController : ControllerBase
             p.ImagenURL,
             p.PrecioOriginal,
             p.PrecioPromocional,
-            p.PorcentajeDescuento,
             ahorro,
             (int)p.TipoVigencia,
             p.FechaValidaHasta,
