@@ -20,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddData(builder.Configuration);
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
+builder.Services.AddScoped<IPedidoCreacionService, PedidoCreacionService>();
 
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
@@ -84,7 +85,14 @@ if (app.Environment.IsProduction())
     // OWASP: Obliga al uso de HTTPS en producción (HSTS)
     app.UseHsts();
 }
-app.UseHttpsRedirection();
+
+// En desarrollo no redirigir HTTP→HTTPS: si no, /api en :5010 devuelve 307 a :7030 sin
+// cabeceras CORS (este middleware va antes de CORS) y el navegador bloquea; el SSR
+// de Angular sigue el redirect y falla con certificado autofirmado en Node.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // B. CORS: DEBE IR AQUÍ (Antes de la seguridad estricta y de Auth)
 // Esto permite que el navegador acepte la conexión de Angular.

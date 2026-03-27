@@ -56,6 +56,10 @@ public static class PostgresConfiguration
 
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
+        services.AddScoped<IPedidoRepository, PedidoRepository>();
+
+        services.AddScoped<IDireccionRepository, DireccionRepository>();
+
 
 
         return services;

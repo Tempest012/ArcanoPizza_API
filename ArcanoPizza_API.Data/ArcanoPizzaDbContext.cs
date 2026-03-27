@@ -97,6 +97,9 @@ public class ArcanoPizzaDbContext : DbContext
             e.Property(x => x.DescuentoTotal).HasPrecision(10, 2);
             e.Property(x => x.Estado).HasMaxLength(50).IsRequired();
             e.Property(x => x.TipoEntrega).HasMaxLength(50).IsRequired();
+            e.Property(x => x.MetodoPago).HasMaxLength(40);
+            e.Property(x => x.StripeCheckoutSessionId).HasMaxLength(128);
+            e.HasIndex(x => x.StripeCheckoutSessionId).IsUnique();
             e.HasOne(x => x.Promocion)
                 .WithMany(p => p.Pedidos)
                 .HasForeignKey(x => x.FkIdPromocion)
@@ -104,7 +107,8 @@ public class ArcanoPizzaDbContext : DbContext
             e.HasOne(x => x.Direccion)
                 .WithMany(d => d.Pedidos)
                 .HasForeignKey(x => x.FkIdDireccion)
-                .OnDelete(DeleteBehavior.Restrict);
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.Usuario)
                 .WithMany(u => u.Pedidos)
                 .HasForeignKey(x => x.FkIdUsuario)

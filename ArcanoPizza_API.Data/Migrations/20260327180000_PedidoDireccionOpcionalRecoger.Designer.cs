@@ -3,6 +3,7 @@ using System;
 using ArcanoPizza_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanoPizza_API.Data.Migrations
 {
     [DbContext(typeof(ArcanoPizzaDbContext))]
-    partial class ArcanoPizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327180000_PedidoDireccionOpcionalRecoger")]
+    partial class PedidoDireccionOpcionalRecoger
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -193,10 +196,6 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.Property<decimal>("Impuestos")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
-
-                    b.Property<string>("MetodoPago")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
 
                     b.Property<decimal>("Subtotal")
                         .HasPrecision(10, 2)
