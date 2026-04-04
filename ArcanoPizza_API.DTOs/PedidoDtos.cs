@@ -15,7 +15,8 @@ public record PedidoListaDto(
     decimal Total,
     DateTime Creado,
     string TipoEntrega,
-    string? PromocionTitulo);
+    string? PromocionTitulo,
+    string? MetodoPago);
 
 public record PedidoLineaDetalleDto(
     int IdPedidoItem,
@@ -42,3 +43,28 @@ public record PedidoDetalleDto(
 public record DireccionDto(int IdDireccion, string Calle, string Colonia, string CodigoPostal);
 
 public record DireccionCrearDto(string Calle, string Colonia, string CodigoPostal);
+
+// 1. El DTO principal para la vista del empleado
+public record PedidoDashboardDto(
+    string Id,
+    string Estado,
+    bool Urgente,
+    string HoraRecibido,
+    string HoraEntrega,
+    ClienteResumenDto Cliente,
+    IReadOnlyList<ProductoResumenDto> Productos,
+    decimal Total
+);
+
+// 2. DTOs de apoyo solo con la info necesaria para las tarjetas
+public record ClienteResumenDto(
+    string Nombre,
+    string Telefono,
+    string Direccion
+);
+
+public record ProductoResumenDto(
+    int Cantidad,
+    string Nombre,
+    string? Nota
+);

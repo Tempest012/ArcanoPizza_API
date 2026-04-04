@@ -67,4 +67,29 @@ public class PedidoRepository : IPedidoRepository
             throw;
         }
     }
+    //Parte de pedididos para el dashboard del empleado.
+    public async Task<IReadOnlyList<Pedido>> GetPedidosActivosDashboardAsync(CancellationToken ct)
+    {
+        return await _context.Pedidos
+            .Include(p => p.Usuario)
+            .Include(p => p.Direccion) // Para la dirección del cliente
+            .Include(p => p.PedidosItem)
+                .ThenInclude(pi => pi.Producto) // Para los nombres de los artículos
+                                                // Filtramos para no traer los pedidos que ya se entregaron o cancelaron
+            .Where(p => p.Estado != "Entregado" && p.Estado != "Cancelado")
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+    }
+
+    public async Task<bool> ActualizarEstadoAsync(int idPedido, string nuevoEstado, CancellationToken ct)
+    {
+        var pedido = await _context.Pedidos.FindAsync(new object[] { idPedido }, ct);
+
+        if (pedido == null) return false;
+
+        pedido.Estado = nuevoEstado;
+        pedido.UpdatedAt = DateTime.UtcNow; // Es buena práctica actualizar la fecha de modificación
+
+        return await _context.SaveChangesAsync(ct) > 0;
+    }
 }

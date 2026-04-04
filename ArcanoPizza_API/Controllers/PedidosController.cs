@@ -100,4 +100,54 @@ public class PedidosController : ControllerBase
         var location = $"/api/Pedidos/{detalle.IdPedido}";
         return Created(location, detalle);
     }
+
+    // GET: api/Pedidos/dashboard
+    [HttpGet("dashboard")]
+    // [Authorize(Roles = "Empleado,Admin")] <-- Te recomiendo habilitar esto si tienes roles
+    public async Task<ActionResult<IReadOnlyList<PedidoDashboardDto>>> GetDashboard(CancellationToken ct)
+    {
+        // 1. Obtenemos todos los pedidos activos (sin filtrar por UsuarioId)
+        var pedidos = await _pedidoRepository.GetPedidosActivosDashboardAsync(ct);
+
+        // 2. Mapeamos hacia el DTO que creamos para Angular
+        var dto = pedidos.Select(p => new PedidoDashboardDto(
+            Id: $"ORD-{p.IdPedido:D6}",
+            Estado: p.Estado,
+            Urgente: p.TipoEntrega.Equals("Express", StringComparison.OrdinalIgnoreCase), // Ejemplo de regla
+            HoraRecibido: p.CreatedAt.ToString("HH:mm"),
+            HoraEntrega: p.CreatedAt.AddMinutes(30).ToString("HH:mm"), // Estimado 30 mins
+            Cliente: new ClienteResumenDto(
+                Nombre: p.Usuario?.NombreUsuario ?? "Cliente Desconocido",
+                Telefono: p.Usuario?.Telefono ?? "Sin teléfono",
+                Direccion: p.Direccion is { } d
+                    ? $"{d.Calle}, {d.Colonia}"
+                    : "Recoger en local"
+            ),
+            Productos: p.PedidosItem.Select(pi => new ProductoResumenDto(
+                Cantidad: pi.Cantidad,
+                Nombre: pi.Producto?.Nombre ?? "(producto sin nombre)",
+                Nota: null // Si agregas notas especiales en el futuro, va aquí
+            )).ToList(),
+            Total: p.Total
+        )).ToList();
+
+        return Ok(dto);
+    }
+
+    [HttpPatch("{id:int}/estado")]
+    public async Task<IActionResult> ActualizarEstado(int id, [FromBody] string nuevoEstado, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(nuevoEstado)) return BadRequest(new { mensaje = "El estado no puede estar vacío." });
+
+        var exito = await _pedidoRepository.ActualizarEstadoAsync(id, nuevoEstado, ct);
+
+        if (!exito) return NotFound(new { mensaje = $"No se encontró el pedido con ID {id}" });
+
+        // 👇 EL CAMBIO ESTÁ AQUÍ: Devolvemos un JSON real en lugar de vacío
+        return Ok(new
+        {
+            mensaje = "Estado actualizado correctamente",
+            estadoAsignado = nuevoEstado
+        });
+    }
 }

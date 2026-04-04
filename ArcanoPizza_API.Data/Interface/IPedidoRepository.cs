@@ -10,4 +10,8 @@ public interface IPedidoRepository
     Task<Pedido?> GetByStripeCheckoutSessionIdAsync(string stripeCheckoutSessionId, CancellationToken ct = default);
 
     Task<Pedido> CrearConItemsAsync(Pedido pedido, IReadOnlyList<PedidoItem> items, CancellationToken ct = default);
+
+    Task<IReadOnlyList<Pedido>> GetPedidosActivosDashboardAsync(CancellationToken ct);
+
+    Task<bool> ActualizarEstadoAsync(int idPedido, string nuevoEstado, CancellationToken ct);
 }
