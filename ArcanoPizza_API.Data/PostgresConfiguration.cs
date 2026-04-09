@@ -22,6 +22,7 @@ public static class PostgresConfiguration
             options.UseNpgsql(npgsqlConnectionString));
 
         services.AddScoped<IExtraRepository, ExtraRepository>();
+        services.AddScoped<IAdminRepository, AdminRepository>();
 
         return services;
     }
