@@ -9,6 +9,21 @@ builder.Services.AddData(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// Configuración de CORS
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.AllowAnyHeader().AllowAnyMethod();
+        if (corsOrigins.Length > 0)
+            policy.WithOrigins(corsOrigins);
+        else
+            policy.SetIsOriginAllowed(_ => true); // Solo para desarrollo
+    });
+});
+
+
 // OWASP Top 10: seguridad
 builder.Services.AddSecurity(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
