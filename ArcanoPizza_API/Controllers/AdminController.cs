@@ -49,8 +49,11 @@ namespace ArcanoPizza_API.Controllers
         }
 
         [HttpPost("usuarios")]
-        public async Task<IActionResult> CrearUsuario(UsuarioAdminDto dto)
+        public async Task<IActionResult> CrearUsuario([FromBody] UsuarioAdminDto dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var usuario = new Usuario
             {
                 NombreUsuario = dto.Nombre,
@@ -58,17 +61,30 @@ namespace ArcanoPizza_API.Controllers
                 Telefono = dto.Telefono,
                 Rol = dto.Tipo,
                 Activo = true,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
-            var creado = await _repo.CrearUsuarioAsync(usuario);
-            return Ok(creado);
+            try
+            {
+                var creado = await _repo.CrearUsuarioAsync(usuario);
+                return Ok(creado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensaje = "Error al guardar usuario",
+                    error = ex.InnerException?.Message ?? ex.Message
+                });
+            }
         }
 
         [HttpPut("usuarios/{id:int}")]
         public async Task<IActionResult> UpdateUsuario(int id, Usuario usuario)
         {
+            usuario.UpdatedAt = DateTime.UtcNow; // ✅ FIX
+
             var actualizado = await _repo.UpdateUsuario(id, usuario);
 
             if (actualizado == null)
@@ -86,7 +102,7 @@ namespace ArcanoPizza_API.Controllers
                 return NotFound();
 
             usuario.Activo = !usuario.Activo;
-            usuario.UpdatedAt = DateTime.Now;
+            usuario.UpdatedAt = DateTime.UtcNow; // ✅ FIX
 
             await _repo.ActualizarUsuarioAsync(usuario);
 
@@ -134,8 +150,8 @@ namespace ArcanoPizza_API.Controllers
                 PrecioBase = dto.Precio,
                 Activo = true,
                 FkIdCategoria = 1,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow,   // ✅ FIX
+                UpdatedAt = DateTime.UtcNow    // ✅ FIX
             };
 
             var creado = await _repo.CrearProductoAsync(producto);
@@ -145,6 +161,8 @@ namespace ArcanoPizza_API.Controllers
         [HttpPut("productos/{id:int}")]
         public async Task<IActionResult> UpdateProducto(int id, Producto producto)
         {
+            producto.UpdatedAt = DateTime.UtcNow; // ✅ FIX
+
             var actualizado = await _repo.UpdateProducto(id, producto);
 
             if (actualizado == null)
