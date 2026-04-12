@@ -1,10 +1,9 @@
 ﻿using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.Model;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
-
+using System.Threading.Tasks;
 
 namespace ArcanoPizza_API.Data.Repositories
 {
@@ -17,7 +16,7 @@ namespace ArcanoPizza_API.Data.Repositories
             _context = context;
         }
 
-        // ===== USUARIOS =====
+        // ================= USUARIOS =================
 
         public async Task<List<Usuario>> GetUsuariosAsync()
         {
@@ -41,9 +40,15 @@ namespace ArcanoPizza_API.Data.Repositories
             var existente = await _context.Usuarios.FindAsync(usuario.IdUsuario);
             if (existente == null) return null;
 
-            _context.Entry(existente).CurrentValues.SetValues(usuario);
-            await _context.SaveChangesAsync();
+            // Actualiza solo los campos permitidos y la fecha de modificación
+            existente.NombreUsuario = usuario.NombreUsuario;
+            existente.Correo = usuario.Correo;
+            existente.Telefono = usuario.Telefono;
+            existente.Rol = usuario.Rol;
+            existente.Activo = usuario.Activo;
+            existente.UpdatedAt = DateTime.UtcNow;
 
+            await _context.SaveChangesAsync();
             return existente;
         }
 
@@ -54,11 +59,10 @@ namespace ArcanoPizza_API.Data.Repositories
 
             _context.Usuarios.Remove(usuario);
             await _context.SaveChangesAsync();
-
             return true;
         }
 
-        // ===== PRODUCTOS =====
+        // ================= PRODUCTOS =================
 
         public async Task<List<Producto>> GetProductosAsync()
         {
@@ -82,9 +86,15 @@ namespace ArcanoPizza_API.Data.Repositories
             var existente = await _context.Productos.FindAsync(producto.IdProducto);
             if (existente == null) return null;
 
-            _context.Entry(existente).CurrentValues.SetValues(producto);
-            await _context.SaveChangesAsync();
+            // Actualiza solo los campos permitidos y la fecha de modificación
+            existente.Nombre = producto.Nombre;
+            existente.Descripcion = producto.Descripcion;
+            existente.PrecioBase = producto.PrecioBase;
+            existente.Activo = producto.Activo;
+            existente.FkIdCategoria = producto.FkIdCategoria;
+            existente.UpdatedAt = DateTime.UtcNow;
 
+            await _context.SaveChangesAsync();
             return existente;
         }
 
@@ -95,65 +105,6 @@ namespace ArcanoPizza_API.Data.Repositories
 
             _context.Productos.Remove(producto);
             await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        public async Task<Usuario?> GetUsuarioById(int id)
-        {
-            return await _context.Usuarios.FindAsync(id);
-        }
-
-        public async Task<Usuario?> UpdateUsuario(int id, Usuario usuario)
-        {
-            var existing = await _context.Usuarios.FindAsync(id);
-
-            if (existing == null) return null;
-
-            existing.NombreUsuario = usuario.NombreUsuario;
-            existing.Correo = usuario.Correo;
-            existing.Telefono = usuario.Telefono;
-            existing.Rol = usuario.Rol;
-            existing.Activo = usuario.Activo;
-            existing.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return existing;
-        }
-
-        public async Task<Producto?> GetProductoById(int id)
-        {
-            return await _context.Productos.FindAsync(id);
-        }
-
-        public async Task<Producto?> UpdateProducto(int id, Producto producto)
-        {
-            var existing = await _context.Productos.FindAsync(id);
-
-            if (existing == null) return null;
-
-            existing.Nombre = producto.Nombre;
-            existing.Descripcion = producto.Descripcion;
-            existing.PrecioBase = producto.PrecioBase;
-            existing.Activo = producto.Activo;
-            existing.FkIdCategoria = producto.FkIdCategoria;
-            existing.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return existing;
-        }
-
-        public async Task<bool> DeleteProducto(int id)
-        {
-            var producto = await _context.Productos.FindAsync(id);
-
-            if (producto == null) return false;
-
-            _context.Productos.Remove(producto);
-            await _context.SaveChangesAsync();
-
             return true;
         }
     }
