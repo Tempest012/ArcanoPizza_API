@@ -1,0 +1,9 @@
+{
+  "nota": "Documentación: promociones-documentacion.json (incluye integracion_con_pedidos_y_pago). Lienzo: promociones-arcano.excalidraw (Partes 1–3).",
+  "archivos": {
+    "diagrama_y_doc_unificados": "promociones-arcano.excalidraw",
+    "solo_json_maquina": "promociones-documentacion.json",
+    "seed_sql": "seed_promociones.sql"
+  },
+  "seccion_pedidos_y_pago": "Ver clave integracion_con_pedidos_y_pago en promociones-documentacion.json"
+}

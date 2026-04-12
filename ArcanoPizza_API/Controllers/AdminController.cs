@@ -1,8 +1,12 @@
-﻿using ArcanoPizza_API.Data.Interface;
+﻿using ArcanoPizza_API.Data;
+using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.DTOs;
 using ArcanoPizza_API.Model;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -13,10 +17,12 @@ namespace ArcanoPizza_API.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminRepository _repo;
+        private readonly ArcanoPizzaDbContext _context;
 
-        public AdminController(IAdminRepository repo)
+        public AdminController(IAdminRepository repo, ArcanoPizzaDbContext context)
         {
             _repo = repo;
+            _context = context;
         }
 
         // ================= USUARIOS =================
@@ -278,6 +284,61 @@ namespace ArcanoPizza_API.Controllers
                 return NotFound();
 
             return NoContent();
+        }
+
+        [HttpGet("dashboard")]
+        public async Task<ActionResult<DashboardDto>> ObtenerMetricasDashboard()
+        {
+            try
+            {
+                var inicioHoy = DateTime.UtcNow.Date;
+                var finHoy = inicioHoy.AddDays(1).AddTicks(-1);
+
+                var pedidosHoy = await _context.Pedidos
+                    .Include(p => p.PedidosItem)
+                    .ThenInclude(i => i.Producto)
+                    .Where(p => p.CreatedAt >= inicioHoy && p.CreatedAt <= finHoy)
+                    .ToListAsync();
+
+                var dashboard = new DashboardDto
+                {
+                    VentasHoy = pedidosHoy
+                        .Where(p => p.Estado == "Completado" || p.Estado == "Entregado")
+                        .Sum(p => p.Total),
+
+                    PedidosActivos = pedidosHoy
+                        .Count(p => p.Estado == "Pendiente" || p.Estado == "En Preparacion"),
+
+                    ProductosVendidos = pedidosHoy
+                        .SelectMany(p => p.PedidosItem)
+                        .GroupBy(i => i.Producto.Nombre)
+                        .Select(g => new ProductoVendidoDto
+                        {
+                            Nombre = g.Key,
+                            Vendidos = g.Sum(i => i.Cantidad),
+                            Total = g.Sum(i => i.Cantidad * i.PrecioUnitario)
+                        })
+                        .OrderByDescending(p => p.Vendidos)
+                        .Take(5)
+                        .ToList(),
+
+                    PedidosPorHora = pedidosHoy // 🔥 Nombre clave: PedidosPorHora
+                        .GroupBy(p => p.CreatedAt.ToLocalTime().Hour)
+                        .Select(g => new PedidosHoraDto
+                        {
+                            Hora = $"{g.Key:00}:00",
+                            Cantidad = g.Count()
+                        })
+                        .OrderBy(p => p.Hora)
+                        .ToList()
+                };
+
+                return Ok(dashboard);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error interno al calcular métricas: " + ex.Message);
+            }
         }
     }
 }

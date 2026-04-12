@@ -293,15 +293,21 @@ Paso 2: Ir al proyecto de la API
 cd C:\ProyectosJP\arcanoPizza\ArcanoPizza_API
 
 Paso 3: Inicializar User Secrets
-dotnet user-secrets init
+
+**dotnet user-secrets init**
+
 Se añadirá un UserSecretsId en el .csproj y se creará la carpeta para los secretos.
 
 Paso 4: Guardar la cadena de conexión
 Sustituye con tu cadena real de PostgreSQL:
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "postgresql://TU_USUARIO:TU_PASSWORD@TU_HOST:5432/TU_BASE_DE_DATOS?sslmode=require"
+
+**dotnet user-secrets set "ConnectionStrings:DefaultConnection" "postgresql://TU_USUARIO:TU_PASSWORD@TU_HOST:5432/TU_BASE_DE_DATOS?sslmode=require"**
+
 
 Paso 5: Comprobar que se guardó
-dotnet user-secrets list
+
+**dotnet user-secrets list**
+
 Deberías ver algo como:
 ConnectionStrings:DefaultConnection = postgresql://...
 
@@ -414,15 +420,15 @@ La API aplica medidas para cubrir las vulnerabilidades del [OWASP Top 10:2025](h
 | **A04 - Cryptographic Failures** | HTTPS forzado, `sslmode=require` en PostgreSQL. Para contraseñas: usar bcrypt/Argon2 (pendiente en módulo Usuario). |
 | **A05 - Injection** | EF Core con consultas parametrizadas, validación en DTOs (`[Required]`, `[MaxLength]`, `[Range]`), rate limiting. |
 | **A06 - Insecure Design** | Arquitectura en capas, separación API/Data/Model/DTOs, principio de mínimo privilegio. |
-| **A07 - Authentication Failures** | JWT preparado (activar con `Jwt:Key`). Rate limiting en endpoints de auth. |
+| **A07 - Authentication Failures** | JWT con `Jwt:SigningKey` (User Secrets o variables de entorno). Rate limiting global y política `auth`. |
 | **A08 - Software/Data Integrity** | No usar scripts o paquetes sin firmar. Configurar verificación de integridad en CI/CD. |
 | **A09 - Security Logging** | Excepciones logueadas con `TraceId` sin datos sensibles. Extensible a auditoría de accesos. |
 | **A10 - Mishandling of Exceptions** | Manejador global de excepciones: respuestas genéricas en producción, sin stack traces al cliente. |
 
-### Configurar JWT (cuando implementes login)
+### Configurar JWT
 
 ```bash
-dotnet user-secrets set "Jwt:Key" "tu-clave-secreta-de-al-menos-32-caracteres"
+dotnet user-secrets set "Jwt:SigningKey" "tu-clave-secreta-de-al-menos-32-caracteres"
 ```
 
 ---

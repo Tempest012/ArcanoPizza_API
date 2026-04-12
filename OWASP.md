@@ -12,7 +12,7 @@ Este documento explica cómo el proyecto ArcanoPizza API aborda cada vulnerabili
 
 | Medida | Implementación | Ubicación |
 |--------|-----------------|-----------|
-| **Autenticación JWT** | La infraestructura para verificar identidad está preparada. Cuando se configure `Jwt:Key`, la API validará tokens Bearer. | `Extensions/ServiceCollectionExtensions.cs` → `AddJwtAuthentication()` |
+| **Autenticación JWT** | JWT Bearer registrado en startup; la clave y parámetros salen de la sección `Jwt` (`SigningKey`, emisor, audiencia), validada al arranque. | `Program.cs` (autenticación + `JwtBearerOptions`); `Options/JwtOptionsValidator.cs` |
 | **`[Authorize]`** | ASP.NET Core Authorization está registrado. Podrás proteger controllers o acciones con `[Authorize]` o `[Authorize(Roles = "Admin")]`. | Disponible en `Program.cs` via `app.UseAuthorization()` |
 | **Validación de existencia** | En endpoints con ID (ej: `GetById`, `Update`, `Delete`), se comprueba que el recurso exista antes de operar. Evita revelar si un ID existe o no mediante timing. | `Controllers/ExtrasController.cs` → `if (extra is null) return NotFound()` |
 
@@ -133,16 +133,16 @@ await _dbSet.Where(e => e.Nombre == userInput).ToListAsync(ct);
 
 | Medida | Implementación | Ubicación |
 |--------|-----------------|-----------|
-| **JWT Bearer** | Autenticación basada en tokens. Se activa cuando `Jwt:Key` está configurado. | `ServiceCollectionExtensions.cs` → `AddJwtAuthentication()` |
-| **Validación de token** | Issuer, Audience, firma y expiración se validan. `ClockSkew = TimeSpan.Zero` evita ventanas de gracia innecesarias. | Líneas 74–84 |
-| **Rate limiting en auth** | Política `auth` con 10 peticiones/minuto para futuros endpoints de login. | `AddFixedWindowLimiter("auth", ...)` |
-| **Clave mínima** | JWT exige al menos 32 caracteres para HS256. | Líneas 67–69 |
+| **JWT Bearer** | Autenticación basada en tokens; emisión en `AuthController` via `JwtTokenService` y validación en `Program.cs`. | `Program.cs`, `Services/JwtTokenService.cs`, `Controllers/AuthController.cs` |
+| **Validación de token** | Issuer, Audience, firma y expiración según `JwtOptions`. | `Program.cs` → `TokenValidationParameters` |
+| **Rate limiting en auth** | Política `auth` con 10 peticiones/minuto para futuros endpoints de login. | `ServiceCollectionExtensions.cs` → `AddFixedWindowLimiter("auth", ...)` |
+| **Clave mínima** | `SigningKey` debe tener al menos 32 caracteres (validación al arranque). | `JwtOptionsValidator.cs` |
 
 ### Pendiente
 
-- Endpoint `/login` que valide credenciales y emita JWT.
-- Proteger operaciones sensibles con `[Authorize]`.
-- Para contraseñas: hashear con bcrypt/Argon2, nunca en texto plano.
+- Afinar rate limiting en rutas `/api/auth/*` si hace falta.
+- Proteger operaciones sensibles con `[Authorize]` donde corresponda.
+- Mantener contraseñas hasheadas (ASP.NET Identity `PasswordHasher`).
 
 ---
 
