@@ -26,15 +26,17 @@ public class PedidosController : ControllerBase
     {
         var userId = User.GetUsuarioId();
         var lista = await _pedidoRepository.GetByUsuarioAsync(userId, ct);
+
         var dto = lista.Select(p => new PedidoListaDto(
                 p.IdPedido,
                 p.Estado,
                 p.Total,
-                p.CreatedAt,
+                p.CreatedAt, // Esto caerá en 'Creado'
                 p.TipoEntrega,
                 p.Promocion?.Titulo,
-                p.MetodoPago))
-            .ToList();
+                p.MetodoPago // Esto caerá en el nuevo 'MetodoPago' que agregamos
+            )).ToList();
+
         return Ok(dto);
     }
 

@@ -3,6 +3,7 @@ using System;
 using ArcanoPizza_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ArcanoPizza_API.Data.Migrations
 {
     [DbContext(typeof(ArcanoPizzaDbContext))]
-    partial class ArcanoPizzaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326154611_UpdateAllModels")]
+    partial class UpdateAllModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -172,19 +175,12 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("DescuentoTotal")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int?>("FkIdDireccion")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("FkIdPromocion")
+                    b.Property<int>("FkIdDireccion")
                         .HasColumnType("integer");
 
                     b.Property<int>("FkIdUsuario")
@@ -194,17 +190,9 @@ namespace ArcanoPizza_API.Data.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
-                    b.Property<string>("MetodoPago")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
-
                     b.Property<decimal>("Subtotal")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
-
-                    b.Property<string>("StripeCheckoutSessionId")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime?>("TimeStamp")
                         .HasColumnType("timestamp with time zone");
@@ -225,12 +213,7 @@ namespace ArcanoPizza_API.Data.Migrations
 
                     b.HasIndex("FkIdDireccion");
 
-                    b.HasIndex("FkIdPromocion");
-
                     b.HasIndex("FkIdUsuario");
-
-                    b.HasIndex("StripeCheckoutSessionId")
-                        .IsUnique();
 
                     b.ToTable("pedidos", (string)null);
                 });
@@ -318,14 +301,6 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.Property<int>("FkIdCategoria")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ImagenURL")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
-                    b.Property<string>("Ingredientes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -343,103 +318,6 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.HasIndex("FkIdCategoria");
 
                     b.ToTable("productos", (string)null);
-                });
-
-            modelBuilder.Entity("ArcanoPizza_API.Model.Promocion", b =>
-                {
-                    b.Property<int>("IdPromocion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("IdPromocion"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Contenido")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Descripcion")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int?>("DiaSemanaRecurrente")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("FechaValidaHasta")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("ImagenURL")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
-                    b.Property<decimal>("PrecioOriginal")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<decimal>("PrecioPromocional")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<int>("TipoVigencia")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("IdPromocion");
-
-                    b.HasIndex("Activo");
-
-                    b.ToTable("promociones", (string)null);
-                });
-
-            modelBuilder.Entity("ArcanoPizza_API.Model.RefreshToken", b =>
-                {
-                    b.Property<int>("IdRefreshToken")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("IdRefreshToken"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("FkIdUsuario")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ReplacedByTokenHash")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.HasKey("IdRefreshToken");
-
-                    b.HasIndex("FkIdUsuario");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.ToTable("refresh_tokens", (string)null);
                 });
 
             modelBuilder.Entity("ArcanoPizza_API.Model.TamanoPizza", b =>
@@ -494,10 +372,6 @@ namespace ArcanoPizza_API.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("PasswordHash")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("Rol")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -514,9 +388,6 @@ namespace ArcanoPizza_API.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("IdUsuario");
-
-                    b.HasIndex("Correo")
-                        .IsUnique();
 
                     b.ToTable("usuarios", (string)null);
                 });
@@ -548,12 +419,8 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.HasOne("ArcanoPizza_API.Model.Direccion", "Direccion")
                         .WithMany("Pedidos")
                         .HasForeignKey("FkIdDireccion")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("ArcanoPizza_API.Model.Promocion", "Promocion")
-                        .WithMany("Pedidos")
-                        .HasForeignKey("FkIdPromocion")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("ArcanoPizza_API.Model.Usuario", "Usuario")
                         .WithMany("Pedidos")
@@ -562,8 +429,6 @@ namespace ArcanoPizza_API.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Direccion");
-
-                    b.Navigation("Promocion");
 
                     b.Navigation("Usuario");
                 });
@@ -624,17 +489,6 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.Navigation("Categoria");
                 });
 
-            modelBuilder.Entity("ArcanoPizza_API.Model.RefreshToken", b =>
-                {
-                    b.HasOne("ArcanoPizza_API.Model.Usuario", "Usuario")
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("FkIdUsuario")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
-                });
-
             modelBuilder.Entity("ArcanoPizza_API.Model.CategoriaProducto", b =>
                 {
                     b.Navigation("Productos");
@@ -667,11 +521,6 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.Navigation("PedidosItem");
                 });
 
-            modelBuilder.Entity("ArcanoPizza_API.Model.Promocion", b =>
-                {
-                    b.Navigation("Pedidos");
-                });
-
             modelBuilder.Entity("ArcanoPizza_API.Model.TamanoPizza", b =>
                 {
                     b.Navigation("PedidosItem");
@@ -682,8 +531,6 @@ namespace ArcanoPizza_API.Data.Migrations
                     b.Navigation("Direcciones");
 
                     b.Navigation("Pedidos");
-
-                    b.Navigation("RefreshTokens");
                 });
 #pragma warning restore 612, 618
         }

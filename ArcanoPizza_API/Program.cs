@@ -14,10 +14,6 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ==========================================
-// 1. REGISTRO DE SERVICIOS (Configuración)
-// ==========================================
-
 builder.Services.AddData(builder.Configuration);
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IPedidoCreacionService, PedidoCreacionService>();
@@ -69,26 +65,42 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Tus servicios de seguridad base
+
 builder.Services.AddSecurity(builder.Configuration);
 
 var app = builder.Build();
 
-// ==========================================
-// 2. MIDDLEWARES (EL ORDEN ES CRÍTICO)
-// ==========================================
+
+
+// 2.1. Manejo de Excepciones (Lo más arriba posible)
+app.UseExceptionHandler(_ => { }); // Usa GlobalExceptionHandlerMiddleware
+
+// 2.2. Cabeceras de seguridad y redirección
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 
 // A. Manejo de Errores y Redirección (Debe ir primero)
 app.UseExceptionHandler();
+
 if (app.Environment.IsProduction())
 {
     // OWASP: Obliga al uso de HTTPS en producción (HSTS)
     app.UseHsts();
 }
+if (!app.Environment.IsDevelopment())
+{
+    // Solo fuerza HTTPS cuando el sistema esté en producción
+    app.UseHttpsRedirection();
+}
 
-// En desarrollo no redirigir HTTP→HTTPS: si no, /api en :5010 devuelve 307 a :7030 sin
-// cabeceras CORS (este middleware va antes de CORS) y el navegador bloquea; el SSR
-// de Angular sigue el redirect y falla con certificado autofirmado en Node.
+
+// 2.3. 🔥 CORS: Darle luz verde a Angular (Debe ir ANTES de Auth)
+app.UseCors("Frontend");
+
+// 2.4. Limitador de peticiones
+app.UseRateLimiter();
+
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
@@ -106,6 +118,7 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseRateLimiter();
 
 // E. Entorno de Desarrollo (Swagger)
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -114,6 +127,13 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/openapi/v1.json", "ArcanoPizza API v1");
     });
 }
+
+
+// 2.6. Seguridad (Quién eres y qué puedes hacer)
+app.UseAuthentication();
+app.UseAuthorization();
+
+// 2.7. Mapeo final
 
 // F. Autenticación y Autorización (OWASP: Control de Acceso)
 app.UseAuthentication();
