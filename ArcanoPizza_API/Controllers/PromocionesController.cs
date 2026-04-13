@@ -1,6 +1,7 @@
 using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.DTOs;
 using ArcanoPizza_API.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ArcanoPizza_API.Controllers;
@@ -35,6 +36,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Administrador")]
     public async Task<ActionResult<PromocionResponseDto>> Create([FromBody] PromocionCreateDto dto, CancellationToken ct)
     {
         if (!Enum.IsDefined(typeof(TipoVigenciaPromocion), dto.TipoVigencia))
@@ -68,6 +70,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Administrador")]
     public async Task<ActionResult> Update(int id, [FromBody] PromocionUpdateDto dto, CancellationToken ct)
     {
         var p = await _promociones.GetByIdAsync(id, ct);
@@ -111,6 +114,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Administrador")]
     public async Task<ActionResult> Delete(int id, CancellationToken ct)
     {
         var p = await _promociones.GetByIdAsync(id, ct);

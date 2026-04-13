@@ -14,6 +14,7 @@ namespace ArcanoPizza_API.Controllers
 {
     [ApiController]
     [Route("api/admin")]
+    [Authorize(Roles = "Administrador")]
     public class AdminController : ControllerBase
     {
         private readonly IAdminRepository _repo;
@@ -182,6 +183,48 @@ namespace ArcanoPizza_API.Controllers
                 IdCategoria = creado.FkIdCategoria
             };
             return Ok(response);
+        }
+
+        [HttpPut("productos/{id:int}")]
+        public async Task<IActionResult> UpdateProducto(int id, [FromBody] ProductoUpdateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var existente = await _repo.GetProductoByIdAsync(id);
+            if (existente is null) return NotFound();
+
+            existente.Nombre = dto.Nombre;
+            existente.Descripcion = dto.Descripcion;
+            existente.PrecioBase = dto.Precio;
+            existente.Activo = dto.Activo;
+            existente.FkIdCategoria = dto.FkIdCategoria;
+            existente.UpdatedAt = DateTime.UtcNow;
+
+            var actualizado = await _repo.ActualizarProductoAsync(existente);
+            if (actualizado is null) return StatusCode(500, "No se pudo actualizar el producto");
+            return NoContent();
+        }
+
+        [HttpPatch("productos/{id:int}/toggle")]
+        public async Task<IActionResult> ToggleProducto(int id)
+        {
+            var existente = await _repo.GetProductoByIdAsync(id);
+            if (existente is null) return NotFound();
+
+            existente.Activo = !existente.Activo;
+            existente.UpdatedAt = DateTime.UtcNow;
+
+            var actualizado = await _repo.ActualizarProductoAsync(existente);
+            if (actualizado is null) return StatusCode(500, "No se pudo actualizar el producto");
+            return NoContent();
+        }
+
+        [HttpDelete("productos/{id:int}")]
+        public async Task<IActionResult> DeleteProducto(int id)
+        {
+            var eliminado = await _repo.EliminarProductoAsync(id);
+            if (!eliminado) return NotFound();
+            return NoContent();
         }
 
         // ================= DASHBOARD =================

@@ -105,7 +105,7 @@ public class PedidosController : ControllerBase
 
     // GET: api/Pedidos/dashboard
     [HttpGet("dashboard")]
-    // [Authorize(Roles = "Empleado,Admin")] <-- Te recomiendo habilitar esto si tienes roles
+    [Authorize(Roles = "Empleado,Administrador")]
     public async Task<ActionResult<IReadOnlyList<PedidoDashboardDto>>> GetDashboard(CancellationToken ct)
     {
         // 1. Obtenemos todos los pedidos activos (sin filtrar por UsuarioId)
@@ -137,6 +137,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPatch("{id:int}/estado")]
+    [Authorize(Roles = "Empleado,Administrador")]
     public async Task<IActionResult> ActualizarEstado(int id, [FromBody] string nuevoEstado, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(nuevoEstado)) return BadRequest(new { mensaje = "El estado no puede estar vacío." });
