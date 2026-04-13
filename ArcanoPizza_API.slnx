@@ -1,3 +1,6 @@
 <Solution>
   <Project Path="ArcanoPizza_API/ArcanoPizza_API.csproj" />
+  <Project Path="ArcanoPizza_API.Model/ArcanoPizza_API.Model.csproj" />
+  <Project Path="ArcanoPizza_API.DTOs/ArcanoPizza_API.DTOs.csproj" />
+  <Project Path="ArcanoPizza_API.Data/ArcanoPizza_API.Data.csproj" />
 </Solution>

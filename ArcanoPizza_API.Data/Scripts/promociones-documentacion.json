@@ -1,0 +1,215 @@
+{
+  "meta": {
+    "proyecto": "Arcano Pizza API",
+    "modulo": "Promociones",
+    "versionDoc": "1.0",
+    "descripcion": "Referencia detallada del módulo de promociones: modelo, API REST, reglas de negocio, reparto de responsabilidades entre backend y frontend, y límites del alcance actual.",
+    "diagrama_unificado": "Scripts/promociones-arcano.excalidraw — Parte 1 diagrama de capas, Parte 2 documentación de promos, Parte 3 pedidos+promo+pago (requisitos para implementar checkout)."
+  },
+  "vision_general": {
+    "que_es": "Un catálogo de ofertas (combos, descuentos por día, etc.) persistido en PostgreSQL y expuesto por una API ASP.NET Core. Cada registro describe qué se muestra al cliente: textos, imagen, precios de referencia y reglas de vigencia (hasta una fecha fija o un día que se repite cada semana).",
+    "objetivo_negocio": "Alimentar la web (lista de promociones, detalle tipo producto) con datos centralizados en lugar de textos fijos en el front. Facilitar que administración o marketing carguen promos vía POST/PUT sin redeploy del Angular.",
+    "alcance_actual": {
+      "incluye": [
+        "CRUD de promociones y lectura pública filtrada por activo.",
+        "Cálculo de ahorro en pesos (ahorroMonto) en la respuesta.",
+        "Modelo de vigencia con dos modos: fecha límite o día de la semana recurrente.",
+        "Campos descripcion (resumen) y contenido (detalle/listado del combo).",
+        "En tabla pedidos: columnas DescuentoTotal y FkIdPromocion para un futuro checkout que aplique descuento."
+      ],
+      "no_incluye": [
+        "Validar en servidor que hoy sea martes antes de aplicar 'Martes Arcano' al carrito.",
+        "Integración con pasarela de pago ni recálculo automático de totales de pedido.",
+        "Autenticación en POST/PUT/DELETE (endpoints abiertos; conviene protegerlos en producción).",
+        "Relación promoción ↔ productos del catálogo (qué SKUs entran en la oferta): hoy es informativo en texto."
+      ]
+    }
+  },
+  "arquitectura_capas": {
+    "presentacion": {
+      "tecnologia": "Angular (SPA)",
+      "responsabilidades": [
+        "Consumir GET /api/Promociones y GET /api/Promociones/{id}.",
+        "Formatear moneda (ej. MXN), fechas locales y nombres de día de la semana en español.",
+        "Construir la frase de vigencia a partir de tipoVigencia + fechaValidaHasta o diaSemanaRecurrente.",
+        "Partir contenido por saltos de línea para mostrar viñetas en detalle.",
+        "Navegación: lista → detalle por idPromocion; carrito puede guardar id y precio promocional como referencia hasta existir lógica de pedido."
+      ]
+    },
+    "api": {
+      "tecnologia": "ASP.NET Core, controlador PromocionesController",
+      "responsabilidades": [
+        "Mapear entidad Promocion ↔ PromocionResponseDto (incluye ahorroMonto calculado).",
+        "Filtrar lecturas públicas: solo Activo = true.",
+        "Validar enum tipoVigencia y coherencia con fecha o día en POST.",
+        "Actualización parcial en PUT (solo campos enviados en el body)."
+      ]
+    },
+    "persistencia": {
+      "tecnologia": "Entity Framework Core + PostgreSQL",
+      "tabla_principal": "promociones",
+      "tabla_relacionada": "pedidos tiene FkIdPromocion opcional y DescuentoTotal para uso futuro al cerrar venta con promo."
+    }
+  },
+  "modelo_datos": {
+    "tabla": "promociones",
+    "clave_primaria": "IdPromocion (identity)",
+    "campos": {
+      "Titulo": "string requerido, máx. 200. Nombre visible de la promo.",
+      "Descripcion": "string opcional, máx. 1000. Resumen corto: cards, subtítulo bajo el título.",
+      "Contenido": "string opcional, máx. 4000. Detalle del combo: qué incluye. Convención recomendada: una línea por ítem; el front hace split('\\n').",
+      "ImagenURL": "string opcional, máx. 2048. URL absoluta o relativa según cómo sirvan los estáticos.",
+      "PrecioOriginal": "decimal(10,2). Precio de referencia (tachado en UI).",
+      "PrecioPromocional": "decimal(10,2). Precio con oferta (el que suele destacarse).",
+      "TipoVigencia": "entero mapeado al enum: 0 = FechaHasta, 1 = DiaSemanaRecurrente.",
+      "FechaValidaHasta": "timestamp nullable. Obligatorio en negocio cuando TipoVigencia = 0.",
+      "DiaSemanaRecurrente": "int nullable 0–6. Obligatorio cuando TipoVigencia = 1. Semántica DayOfWeek .NET: 0=domingo … 6=sábado (martes=2).",
+      "Activo": "bool. Si false, no aparece en GET públicos.",
+      "CreatedAt_UpdatedAt": "auditoría UTC típica."
+    }
+  },
+  "api_rest": {
+    "basePath": "/api/Promociones",
+    "serializacion": "JSON con propiedades en camelCase por convención de ASP.NET Core.",
+    "lectura_publica": {
+      "GET_lista": {
+        "ruta": "GET /api/Promociones",
+        "comportamiento": "Devuelve array de promociones con Activo=true, ordenadas por IdPromocion.",
+        "uso": "Pantalla grid de promociones."
+      },
+      "GET_detalle": {
+        "ruta": "GET /api/Promociones/{id}",
+        "comportamiento": "200 si existe y está activa; 404 si no existe o está inactiva.",
+        "uso": "Pantalla detalle / deep link."
+      }
+    },
+    "administracion": {
+      "POST": {
+        "ruta": "POST /api/Promociones",
+        "body": "PromocionCreateDto",
+        "validaciones_servidor": [
+          "tipoVigencia debe ser un valor definido del enum.",
+          "Si tipo 0 (FechaHasta): FechaValidaHasta requerida.",
+          "Si tipo 1 (DiaSemanaRecurrente): DiaSemanaRecurrente requerido."
+        ],
+        "respuesta": "201 Created con Location y cuerpo PromocionResponseDto."
+      },
+      "PUT": {
+        "ruta": "PUT /api/Promociones/{id}",
+        "body": "PromocionUpdateDto (parcial)",
+        "comportamiento": "Solo actualiza propiedades presentes en el JSON; null en string puede significar 'no cambiar' según el campo."
+      },
+      "DELETE": {
+        "ruta": "DELETE /api/Promociones/{id}",
+        "comportamiento": "Elimina el registro (cuidado con pedidos que referencien FkIdPromocion; FK con ON DELETE SET NULL en pedidos)."
+      }
+    }
+  },
+  "dto_respuesta": {
+    "nombre": "PromocionResponseDto",
+    "campos": {
+      "idPromocion": "int",
+      "titulo": "string",
+      "descripcion": "string|null",
+      "contenido": "string|null",
+      "imagenURL": "string|null",
+      "precioOriginal": "number",
+      "precioPromocional": "number",
+      "ahorroMonto": "number — calculado: max(0, precioOriginal - precioPromocional); única fuente de descuento en pesos en la respuesta",
+      "tipoVigencia": "0|1",
+      "fechaValidaHasta": "string ISO date-time|null",
+      "diaSemanaRecurrente": "0-6|null",
+      "activo": "boolean"
+    }
+  },
+  "reglas_vigencia": {
+    "modo_fecha": {
+      "codigo": 0,
+      "nombre": "FechaHasta",
+      "cuando_usar": "Promos con caducidad (ej. 'válido hasta el 31 de marzo de 2026').",
+      "datos": "FechaValidaHasta obligatoria en alta; DiaSemanaRecurrente se ignora al persistir si tipo es 0."
+    },
+    "modo_dia_semanal": {
+      "codigo": 1,
+      "nombre": "DiaSemanaRecurrente",
+      "cuando_usar": "Promos que aplican cada semana el mismo día (ej. todos los martes).",
+      "datos": "DiaSemanaRecurrente obligatorio; FechaValidaHasta ignorada al persistir si tipo es 1.",
+      "mapa_dias": "Alineado a System.DayOfWeek: Domingo=0, Lunes=1, Martes=2, Miércoles=3, Jueves=4, Viernes=5, Sábado=6."
+    },
+    "texto_para_usuario": "No lo genera el backend. El front debe traducir tipo + fecha o día a una cadena legible en español."
+  },
+  "integracion_con_pedidos_y_pago": {
+    "estado_implementacion": "Las tablas pedidos, pedidos_item, pagos y las columnas DescuentoTotal / FkIdPromocion en pedidos ya existen en BD y en el modelo EF. No hay aún PedidosController ni servicio que cree el pedido aplicando la promo; PagosController (Stripe) no persiste pedidos en PostgreSQL tal como está documentado aquí.",
+    "objetivo": "Que al pagar, el monto cobrado coincida con un pedido guardado cuyo Total ya refleja el descuento de la promoción, y quede auditoría (FkIdPromocion + DescuentoTotal).",
+    "campos_en_tabla_pedidos": {
+      "Subtotal": "Suma de líneas (cantidad × precio unitario de ítems + extras) antes de descuento global de promo.",
+      "DescuentoTotal": "Monto total descontado del subtotal por aplicar la promoción al pedido (no a nivel de línea en el modelo actual). Debe ser ≥ 0 y ≤ Subtotal.",
+      "Impuestos": "Calculados sobre la base imponible que defina negocio (típicamente después del descuento o antes; documentar una sola política).",
+      "Total": "Debe ser coherente con PedidoTotales.CalcularTotal(Subtotal, DescuentoTotal, Impuestos) salvo redondeos explícitos.",
+      "FkIdPromocion": "Nullable. Id de la fila en promociones usada para el descuento; null si el pedido no llevó promo.",
+      "FkIdUsuario_FkIdDireccion": "Ya requeridos por el modelo actual para crear un pedido."
+    },
+    "pedido_item": {
+      "nota": "PedidoItem no tiene FkIdPromocion ni descuento por línea. El descuento de promo tipo 'combo' o fijo suele modelarse como DescuentoTotal a nivel pedido; si más adelante se necesita trazabilidad por línea, habría que extender el modelo.",
+      "PrecioUnitario": "Precio congelado al momento del pedido (producto + tamaño + extras), antes del descuento global de promo."
+    },
+    "pago_stripe_u_otro": {
+      "Pago_Monto": "Debe igualar Pedido.Total al confirmar cobro.",
+      "flujo_recomendado": [
+        "1) Cliente envía carrito + opcional idPromocion (o el front solo envía líneas y el servidor recalcula).",
+        "2) Servidor carga Promocion por id, verifica Activo=true y vigencia (fecha o día de semana en UTC/local según reglas).",
+        "3) Servidor calcula Subtotal desde ítems; aplica regla de descuento (ej. DescuentoTotal = función de la promo: monto fijo, % sobre subtotal elegible, etc.).",
+        "4) Calcula Impuestos y Total = PedidoTotales.CalcularTotal(Subtotal, DescuentoTotal, Impuestos).",
+        "5) Persiste Pedido + PedidoItem(s) + opcional Pago en estado pendiente.",
+        "6) Crea sesión Stripe (o cobro) con amount = Total; al webhook de éxito, marca Pago y Pedido como pagados."
+      ],
+      "validaciones_servidor_obligatorias": [
+        "No confiar en el descuento que envía el cliente: recalcular DescuentoTotal desde la fila promociones y reglas de negocio.",
+        "Rechazar si la promo está inactiva, fuera de vigencia o el id no existe.",
+        "Asegurar DescuentoTotal ≤ Subtotal."
+      ]
+    },
+    "contrato_sugerido_cliente_a_servidor": {
+      "descripcion": "Ejemplo de cuerpo para un futuro POST /api/pedidos (no implementado).",
+      "ejemplo": {
+        "fkIdDireccion": 1,
+        "fkIdUsuario": 1,
+        "tipoEntrega": "domicilio",
+        "items": [
+          { "fkIdProducto": 1, "cantidad": 2, "fkIdTamanoPizza": 1, "extrasIds": [] }
+        ],
+        "fkIdPromocion": 3,
+        "subtotalCliente": "opcional solo para comparar; el servidor ignora y recalcula"
+      }
+    },
+    "helper_codigo": "PedidoTotales.CalcularTotal(subtotal, descuentoTotal, impuestos) — usar tras fijar Subtotal, DescuentoTotal e Impuestos."
+  },
+  "ejemplos": {
+    "post_fecha": {
+      "titulo": "Ritual Familiar",
+      "descripcion": "2 pizzas grandes + 4 bebidas + pan del conjuro",
+      "contenido": "2 Pizzas Grandes Clásicas (a elegir)\\n4 Refrescos de cola 600ml\\n1 Orden de Pan del Conjuro",
+      "precioOriginal": 49.9,
+      "precioPromocional": 39.9,
+      "tipoVigencia": 0,
+      "fechaValidaHasta": "2026-03-31T23:59:59Z",
+      "diaSemanaRecurrente": null,
+      "activo": true
+    },
+    "post_dia": {
+      "titulo": "Martes Arcano",
+      "descripcion": "Pizzas especiales con 25% de descuento",
+      "tipoVigencia": 1,
+      "fechaValidaHasta": null,
+      "diaSemanaRecurrente": 2,
+      "precioOriginal": 19.9,
+      "precioPromocional": 14.93,
+      "activo": true
+    }
+  },
+  "glosario": {
+    "ahorroMonto": "No es columna en BD; se expone solo en el DTO de respuesta como max(0, precioOriginal - precioPromocional). No hay porcentaje persistido en BD.",
+    "activo": "Interruptor de publicación: inactivo = invisible para GET públicos pero sigue existiendo para administración hasta DELETE.",
+    "contenido_vs_descripcion": "Descripcion = breve; Contenido = detalle largo o lista de ítems del combo."
+  }
+}

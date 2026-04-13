@@ -4,14 +4,24 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>149056f5-4b29-4f22-a2d1-05e8ffcc7509</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Stripe.net" Version="50.4.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.5" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
+    <ProjectReference Include="..\ArcanoPizza_API.Model\ArcanoPizza_API.Model.csproj" />
+    <ProjectReference Include="..\ArcanoPizza_API.DTOs\ArcanoPizza_API.DTOs.csproj" />
+    <ProjectReference Include="..\ArcanoPizza_API.Data\ArcanoPizza_API.Data.csproj" />
   </ItemGroup>
 
 </Project>
