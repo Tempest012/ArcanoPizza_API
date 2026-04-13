@@ -89,6 +89,7 @@ namespace ArcanoPizza_API.Data.Repositories
             // Actualiza solo los campos permitidos y la fecha de modificación
             existente.Nombre = producto.Nombre;
             existente.Descripcion = producto.Descripcion;
+            existente.ImagenURL = producto.ImagenURL;
             existente.PrecioBase = producto.PrecioBase;
             existente.Activo = producto.Activo;
             existente.FkIdCategoria = producto.FkIdCategoria;

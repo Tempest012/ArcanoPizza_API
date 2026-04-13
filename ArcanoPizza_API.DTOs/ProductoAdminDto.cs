@@ -9,5 +9,6 @@ namespace ArcanoPizza_API.DTOs
         public string Nombre { get; set; }
         public string? Descripcion { get; set; }
         public decimal Precio { get; set; }
+        public string? ImagenURL { get; set; }
     }
 }

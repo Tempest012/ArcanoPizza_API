@@ -12,6 +12,8 @@ namespace ArcanoPizza_API.DTOs
 
         public string? Descripcion { get; set; }
 
+        public string? ImagenURL { get; set; }
+
         [Required]
         [Range(0.01, 10000, ErrorMessage = "El precio debe ser mayor a 0")]
         public decimal Precio { get; set; }
