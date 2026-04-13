@@ -25,6 +25,15 @@ public class PromocionesController : ControllerBase
         return Ok(ordenada.Select(ToDto));
     }
 
+    [HttpGet("admin")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<ActionResult<IEnumerable<PromocionResponseDto>>> GetAllAdmin(CancellationToken ct)
+    {
+        var lista = await _promociones.FindAsync(_ => true, ct);
+        var ordenada = lista.OrderBy(p => p.IdPromocion);
+        return Ok(ordenada.Select(ToDto));
+    }
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PromocionResponseDto>> GetById(int id, CancellationToken ct)
     {

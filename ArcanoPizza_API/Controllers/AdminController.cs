@@ -150,6 +150,7 @@ namespace ArcanoPizza_API.Controllers
                 Id = p.IdProducto,
                 Nombre = p.Nombre,
                 Descripcion = p.Descripcion,
+                ImagenURL = p.ImagenURL,
                 PrecioBase = p.PrecioBase,
                 Activo = p.Activo,
                 IdCategoria = p.FkIdCategoria
@@ -165,6 +166,7 @@ namespace ArcanoPizza_API.Controllers
             {
                 Nombre = dto.Nombre,
                 Descripcion = dto.Descripcion,
+                ImagenURL = dto.ImagenURL,
                 PrecioBase = dto.Precio,
                 Activo = true,
                 FkIdCategoria = 1,
@@ -178,6 +180,7 @@ namespace ArcanoPizza_API.Controllers
                 Id = creado.IdProducto,
                 Nombre = creado.Nombre,
                 Descripcion = creado.Descripcion,
+                ImagenURL = creado.ImagenURL,
                 PrecioBase = creado.PrecioBase,
                 Activo = creado.Activo,
                 IdCategoria = creado.FkIdCategoria
@@ -195,6 +198,7 @@ namespace ArcanoPizza_API.Controllers
 
             existente.Nombre = dto.Nombre;
             existente.Descripcion = dto.Descripcion;
+            existente.ImagenURL = dto.ImagenURL;
             existente.PrecioBase = dto.Precio;
             existente.Activo = dto.Activo;
             existente.FkIdCategoria = dto.FkIdCategoria;
