@@ -10,6 +10,7 @@ namespace ArcanoPizza_API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+
 public class PedidosController : ControllerBase
 {
     private readonly IPedidoRepository _pedidoRepository;
@@ -128,7 +129,8 @@ public class PedidosController : ControllerBase
             Productos: p.PedidosItem.Select(pi => new ProductoResumenDto(
                 Cantidad: pi.Cantidad,
                 Nombre: pi.Producto?.Nombre ?? "(producto sin nombre)",
-                Nota: null // Si agregas notas especiales en el futuro, va aquí
+                Nota: null, // Si agregas notas especiales en el futuro, va aquí
+                Ingredientes: pi.Producto?.Ingredientes ?? "Sin ingredientes"
             )).ToList(),
             Total: p.Total
         )).ToList();
