@@ -80,10 +80,11 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(dto.Correo) || string.IsNullOrWhiteSpace(dto.Password))
-            return BadRequest();
+        var correo = (dto.Correo ?? dto.Email)?.Trim();
+        if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(dto.Password))
+            return BadRequest(new { mensaje = "Correo y contraseña son obligatorios." });
 
-        var usuario = await _usuarioRepository.GetByCorreoNormalizedAsync(dto.Correo, ct);
+        var usuario = await _usuarioRepository.GetByCorreoNormalizedAsync(correo, ct);
         if (usuario?.PasswordHash is null)
             return Unauthorized();
 
