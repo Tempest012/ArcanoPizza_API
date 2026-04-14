@@ -66,5 +66,6 @@ public record ClienteResumenDto(
 public record ProductoResumenDto(
     int Cantidad,
     string Nombre,
-    string? Nota
+    string? Nota,
+    string Ingredientes
 );
