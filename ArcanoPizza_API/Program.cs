@@ -7,10 +7,13 @@ using ArcanoPizza_API.Model;
 using ArcanoPizza_API.Options;
 using ArcanoPizza_API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +54,21 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// Logging de HTTP (útil para diagnosticar en Azure)
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields =
+        HttpLoggingFields.RequestMethod
+        | HttpLoggingFields.RequestPath
+        | HttpLoggingFields.RequestQuery
+        | HttpLoggingFields.RequestHeaders
+        | HttpLoggingFields.ResponseStatusCode
+        | HttpLoggingFields.Duration;
+    options.RequestHeaders.Add("Origin");
+    options.RequestHeaders.Add("Referer");
+    options.RequestHeaders.Add("User-Agent");
+});
+
 // Configuración de CORS
 var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
@@ -82,6 +100,66 @@ else
 
 // Excepciones primero (middleware global)
 app.UseExceptionHandler();
+
+// Logging de request/response metadata
+app.UseHttpLogging();
+
+// Logging de trazas por request (y body redactado SOLO para /api/Auth/login)
+app.Use(async (context, next) =>
+{
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("RequestTrace");
+    var sw = Stopwatch.StartNew();
+    try
+    {
+        if (HttpMethods.IsPost(context.Request.Method)
+            && context.Request.Path.Equals("/api/Auth/login", StringComparison.OrdinalIgnoreCase))
+        {
+            // No loguear contraseñas. Solo registrar shape y correo/email.
+            context.Request.EnableBuffering();
+            using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
+            var body = await reader.ReadToEndAsync();
+            context.Request.Body.Position = 0;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                string? correo = null;
+                if (doc.RootElement.TryGetProperty("correo", out var c) && c.ValueKind == JsonValueKind.String)
+                    correo = c.GetString();
+                else if (doc.RootElement.TryGetProperty("email", out var e) && e.ValueKind == JsonValueKind.String)
+                    correo = e.GetString();
+
+                logger.LogInformation(
+                    "LOGIN request: origin={Origin} ip={IP} correo/email={Correo} traceId={TraceId}",
+                    context.Request.Headers.Origin.ToString(),
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    correo,
+                    context.TraceIdentifier);
+            }
+            catch
+            {
+                logger.LogInformation(
+                    "LOGIN request: body invalid json origin={Origin} ip={IP} traceId={TraceId}",
+                    context.Request.Headers.Origin.ToString(),
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    context.TraceIdentifier);
+            }
+        }
+
+        await next();
+    }
+    finally
+    {
+        sw.Stop();
+        logger.LogInformation(
+            "HTTP {Method} {Path} -> {StatusCode} ({ElapsedMs}ms) traceId={TraceId}",
+            context.Request.Method,
+            context.Request.Path.Value,
+            context.Response.StatusCode,
+            sw.ElapsedMilliseconds,
+            context.TraceIdentifier);
+    }
+});
 
 // CORS debe ir antes de auth
 app.UseCors("Frontend");
