@@ -27,27 +27,16 @@ public class PedidosController : ControllerBase
         var userId = User.GetUsuarioId();
         var lista = await _pedidoRepository.GetByUsuarioAsync(userId, ct);
 
-<<<<<<< HEAD
-=======
-        // 🔥 CORRECCIÓN: Le pasamos exactamente los 6 datos que espera el PedidoListaDto
->>>>>>> cesar/cliente
+        // 🔥 Ahora incluimos p.MetodoPago para cumplir con los 7 argumentos del DTO de Omar
         var dto = lista.Select(p => new PedidoListaDto(
                 p.IdPedido,
                 p.Estado,
                 p.Total,
-<<<<<<< HEAD
-                p.CreatedAt, // Esto caerá en 'Creado'
-                p.TipoEntrega,
-                p.Promocion?.Titulo,
-                p.MetodoPago // Esto caerá en el nuevo 'MetodoPago' que agregamos
-            )).ToList();
-=======
                 p.TimeStamp ?? DateTime.UtcNow,
                 p.TipoEntrega,
-                p.Promocion?.Titulo
-            ))
-            .ToList();
->>>>>>> cesar/cliente
+                p.Promocion?.Titulo,
+                p.MetodoPago // 👈 Este es el argumento que faltaba
+            )).ToList();
 
         return Ok(dto);
     }
@@ -110,7 +99,6 @@ public class PedidosController : ControllerBase
         if (detalle is null)
             return Problem("No se pudo crear el pedido.");
 
-        // Evita InvalidOperationException si el enrutador no resuelve CreatedAtAction.
         var location = $"/api/Pedidos/{detalle.IdPedido}";
         return Created(location, detalle);
     }
