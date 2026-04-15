@@ -20,5 +20,8 @@ namespace ArcanoPizza_API.DTOs
 
         [Required]
         public int FkIdCategoria { get; set; }
+
+        public string? Ingredientes { get; set; }
+        public string? ImagenURL { get; set; }
     }
 }

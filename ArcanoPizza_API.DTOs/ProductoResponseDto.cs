@@ -12,5 +12,9 @@ namespace ArcanoPizza_API.DTOs
         public decimal PrecioBase { get; set; }
         public bool Activo { get; set; }
         public int IdCategoria { get; set; }
+
+        // Campos agregados para que la API se los devuelva a Angular
+        public string? Ingredientes { get; set; }
+        public string? ImagenURL { get; set; }
     }
 }
