@@ -113,6 +113,11 @@ public class ArcanoPizzaDbContext : DbContext
                 .WithMany(u => u.Pedidos)
                 .HasForeignKey(x => x.FkIdUsuario)
                 .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Repartidor)
+                .WithMany(u => u.PedidosComoRepartidor)
+                .HasForeignKey(x => x.FkIdRepartidor)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // pagos
