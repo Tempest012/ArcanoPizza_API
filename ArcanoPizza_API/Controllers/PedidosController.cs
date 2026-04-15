@@ -11,7 +11,7 @@ namespace ArcanoPizza_API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-
+[Authorize]
 
 public class PedidosController : ControllerBase
 {
