@@ -11,8 +11,11 @@ public class Usuario
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string Rol { get; set; } = string.Empty;
+    public bool Activo { get; set; } = true;
+
 
     public ICollection<Direccion> Direcciones { get; set; } = new List<Direccion>();
     public ICollection<Pedido> Pedidos { get; set; } = new List<Pedido>();
+    public ICollection<Pedido> PedidosComoRepartidor { get; set; } = new List<Pedido>();
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

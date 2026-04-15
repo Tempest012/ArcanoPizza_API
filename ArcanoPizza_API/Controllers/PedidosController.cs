@@ -1,25 +1,32 @@
+using ArcanoPizza_API.Data;
 using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.DTOs;
 using ArcanoPizza_API.Helpers;
 using ArcanoPizza_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ArcanoPizza_API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+
 
 public class PedidosController : ControllerBase
 {
     private readonly IPedidoRepository _pedidoRepository;
     private readonly IPedidoCreacionService _pedidoCreacion;
 
-    public PedidosController(IPedidoRepository pedidoRepository, IPedidoCreacionService pedidoCreacion)
+    // 👇 1. Declaramos la variable del contexto
+    private readonly ArcanoPizzaDbContext _context;
+    public PedidosController(IPedidoRepository pedidoRepository, IPedidoCreacionService pedidoCreacion, ArcanoPizzaDbContext context)
     {
         _pedidoRepository = pedidoRepository;
         _pedidoCreacion = pedidoCreacion;
+
+        // 👇 3. Lo asignamos para que los métodos de abajo puedan usarlo
+        _context = context;
     }
 
     [HttpGet]
@@ -152,4 +159,35 @@ public class PedidosController : ControllerBase
             estadoAsignado = nuevoEstado
         });
     }
+
+    // GET: api/Pedidos/repartidores
+    [HttpGet("repartidores")]
+    public async Task<ActionResult<IEnumerable<EmpleadoResumenDto>>> GetRepartidores(CancellationToken ct)
+    {
+        // Buscamos solo a los usuarios activos con rol de Empleado
+        var empleados = await _context.Usuarios
+            .Where(u => u.Rol == "Empleado" && u.Activo)
+            .Select(u => new EmpleadoResumenDto(u.IdUsuario, u.NombreUsuario))
+            .ToListAsync(ct);
+
+        return Ok(empleados);
+    }
+
+    // PATCH: api/Pedidos/{id}/asignar-repartidor
+    [HttpPatch("{id:int}/asignar-repartidor")]
+    public async Task<IActionResult> AsignarRepartidor(int id, [FromBody] AsignarRepartidorRequest request, CancellationToken ct)
+    {
+        var pedido = await _context.Pedidos.FindAsync(new object[] { id }, ct);
+
+        if (pedido == null) return NotFound(new { mensaje = "Pedido no encontrado" });
+
+        // Actualizamos el estado y enlazamos la FK del repartidor
+        pedido.Estado = "En Ruta";
+        pedido.FkIdRepartidor = request.RepartidorId;
+
+        await _context.SaveChangesAsync(ct);
+
+        return Ok(new { mensaje = "Repartidor asignado correctamente" });
+    }
+
 }
