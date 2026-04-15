@@ -26,15 +26,18 @@ public class PedidosController : ControllerBase
     {
         var userId = User.GetUsuarioId();
         var lista = await _pedidoRepository.GetByUsuarioAsync(userId, ct);
+
+        // 🔥 CORRECCIÓN: Le pasamos exactamente los 6 datos que espera el PedidoListaDto
         var dto = lista.Select(p => new PedidoListaDto(
                 p.IdPedido,
                 p.Estado,
                 p.Total,
-                p.CreatedAt,
+                p.TimeStamp ?? DateTime.UtcNow,
                 p.TipoEntrega,
-                p.Promocion?.Titulo,
-                p.MetodoPago))
+                p.Promocion?.Titulo
+            ))
             .ToList();
+
         return Ok(dto);
     }
 

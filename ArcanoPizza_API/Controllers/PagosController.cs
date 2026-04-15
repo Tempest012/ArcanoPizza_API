@@ -81,18 +81,23 @@ public class PagosController : ControllerBase
         foreach (var item in body.Items)
         {
             var productoReal = productosEnBaseDeDatos.FirstOrDefault(p => p.IdProducto == item.ProductoId);
+            if (productoReal is null) continue;
 
-            if (productoReal is null)
-                continue;
+            // 🔥 Usamos el precio que manda Angular (que ya tiene el precio correcto del tamaño "Personal")
+            decimal precioUsar = item.Precio > 0 ? item.Precio : productoReal.PrecioBase;
+
+            // Le sumamos el 16% de IVA
+            decimal precioConIva = precioUsar * 1.16m;
 
             lineItems.Add(new SessionLineItemOptions
             {
                 PriceData = new SessionLineItemPriceDataOptions
                 {
-                    UnitAmount = (long)(productoReal.PrecioBase * 100),
+                    UnitAmount = (long)Math.Round(precioConIva * 100m),
                     Currency = "mxn",
                     ProductData = new SessionLineItemPriceDataProductDataOptions
                     {
+                        // Le agregamos el nombre del producto normal
                         Name = productoReal.Nombre,
                     },
                 },
@@ -104,7 +109,8 @@ public class PagosController : ControllerBase
             return BadRequest("El carrito está vacío o los productos no son válidos.");
 
         var lineasPayload = body.Items
-            .Select(i => new PedidoLineaCrearDto(i.ProductoId, i.Cantidad, null))
+            // 🔥 Antes decía null al final, ahora le pasamos el tamaño de la pizza
+            .Select(i => new PedidoLineaCrearDto(i.ProductoId, i.Cantidad, i.TamanoPizzaId))
             .ToList();
 
         var lineasJson = JsonSerializer.Serialize(lineasPayload, JsonOpts);
