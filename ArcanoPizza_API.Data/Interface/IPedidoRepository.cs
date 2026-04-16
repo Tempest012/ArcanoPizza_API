@@ -13,5 +13,7 @@ public interface IPedidoRepository
 
     Task<IReadOnlyList<Pedido>> GetPedidosActivosDashboardAsync(CancellationToken ct);
 
+    Task<IReadOnlyList<Pedido>> GetAsignadosARepartidorAsync(int repartidorId, CancellationToken ct);
+
     Task<bool> ActualizarEstadoAsync(int idPedido, string nuevoEstado, CancellationToken ct);
 }

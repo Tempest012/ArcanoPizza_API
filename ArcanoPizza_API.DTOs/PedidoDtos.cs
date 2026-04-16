@@ -48,6 +48,7 @@ public record DireccionCrearDto(string Calle, string Colonia, string CodigoPosta
 public record PedidoDashboardDto(
     string Id,
     string Estado,
+    string TipoEntrega,
     bool Urgente,
     string HoraRecibido,
     string HoraEntrega,

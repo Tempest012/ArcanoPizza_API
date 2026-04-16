@@ -122,6 +122,7 @@ public class PedidosController : ControllerBase
         var dto = pedidos.Select(p => new PedidoDashboardDto(
             Id: $"ORD-{p.IdPedido:D6}",
             Estado: p.Estado,
+            TipoEntrega: p.TipoEntrega,
             Urgente: p.TipoEntrega.Equals("Express", StringComparison.OrdinalIgnoreCase), // Ejemplo de regla
             HoraRecibido: p.CreatedAt.ToString("HH:mm"),
             HoraEntrega: p.CreatedAt.AddMinutes(30).ToString("HH:mm"), // Estimado 30 mins
@@ -144,11 +145,55 @@ public class PedidosController : ControllerBase
         return Ok(dto);
     }
 
+    // GET: api/Pedidos/mis-asignados
+    [HttpGet("mis-asignados")]
+    [Authorize(Roles = "Repartidor")]
+    public async Task<ActionResult<IReadOnlyList<PedidoDashboardDto>>> MisAsignados(CancellationToken ct)
+    {
+        var userId = User.GetUsuarioId();
+        var pedidos = await _pedidoRepository.GetAsignadosARepartidorAsync(userId, ct);
+
+        var dto = pedidos.Select(p => new PedidoDashboardDto(
+            Id: $"ORD-{p.IdPedido:D6}",
+            Estado: p.Estado,
+            TipoEntrega: p.TipoEntrega,
+            Urgente: p.TipoEntrega.Equals("Express", StringComparison.OrdinalIgnoreCase),
+            HoraRecibido: p.CreatedAt.ToString("HH:mm"),
+            HoraEntrega: p.CreatedAt.AddMinutes(30).ToString("HH:mm"),
+            Cliente: new ClienteResumenDto(
+                Nombre: p.Usuario?.NombreUsuario ?? "Cliente Desconocido",
+                Telefono: p.Usuario?.Telefono ?? "Sin teléfono",
+                Direccion: p.Direccion is { } d
+                    ? $"{d.Calle}, {d.Colonia}"
+                    : "Recoger en local"
+            ),
+            Productos: p.PedidosItem.Select(pi => new ProductoResumenDto(
+                Cantidad: pi.Cantidad,
+                Nombre: pi.Producto?.Nombre ?? "(producto sin nombre)",
+                Nota: null,
+                Ingredientes: pi.Producto?.Ingredientes ?? "Sin ingredientes"
+            )).ToList(),
+            Total: p.Total
+        )).ToList();
+
+        return Ok(dto);
+    }
+
     [HttpPatch("{id:int}/estado")]
-    [Authorize(Roles = "Empleado,Administrador")]
+    [Authorize(Roles = "Empleado,Administrador,Repartidor")]
     public async Task<IActionResult> ActualizarEstado(int id, [FromBody] string nuevoEstado, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(nuevoEstado)) return BadRequest(new { mensaje = "El estado no puede estar vacío." });
+
+        // Si es repartidor, solo puede modificar pedidos asignados a él.
+        var rol = User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+        if (string.Equals(rol, "Repartidor", StringComparison.OrdinalIgnoreCase))
+        {
+            var userId = User.GetUsuarioId();
+            var pedido = await _context.Pedidos.AsNoTracking().FirstOrDefaultAsync(p => p.IdPedido == id, ct);
+            if (pedido is null) return NotFound(new { mensaje = $"No se encontró el pedido con ID {id}" });
+            if (pedido.FkIdRepartidor != userId) return Forbid();
+        }
 
         var exito = await _pedidoRepository.ActualizarEstadoAsync(id, nuevoEstado, ct);
 
@@ -166,9 +211,9 @@ public class PedidosController : ControllerBase
     [HttpGet("repartidores")]
     public async Task<ActionResult<IEnumerable<EmpleadoResumenDto>>> GetRepartidores(CancellationToken ct)
     {
-        // Buscamos solo a los usuarios activos con rol de Empleado
+        // Buscamos solo a los usuarios activos con rol de Repartidor
         var empleados = await _context.Usuarios
-            .Where(u => u.Rol == "Empleado" && u.Activo)
+            .Where(u => u.Rol == "Repartidor" && u.Activo)
             .Select(u => new EmpleadoResumenDto(u.IdUsuario, u.NombreUsuario))
             .ToListAsync(ct);
 
@@ -177,11 +222,15 @@ public class PedidosController : ControllerBase
 
     // PATCH: api/Pedidos/{id}/asignar-repartidor
     [HttpPatch("{id:int}/asignar-repartidor")]
+    [Authorize(Roles = "Empleado,Administrador")]
     public async Task<IActionResult> AsignarRepartidor(int id, [FromBody] AsignarRepartidorRequest request, CancellationToken ct)
     {
         var pedido = await _context.Pedidos.FindAsync(new object[] { id }, ct);
 
         if (pedido == null) return NotFound(new { mensaje = "Pedido no encontrado" });
+
+        if (!string.Equals(pedido.TipoEntrega, "Reparto", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { mensaje = "Solo se puede asignar repartidor a pedidos con tipoEntrega='Reparto'." });
 
         // Actualizamos el estado y enlazamos la FK del repartidor
         pedido.Estado = "En Ruta";
