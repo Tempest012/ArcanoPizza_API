@@ -2,11 +2,10 @@
 using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.DTOs;
 using ArcanoPizza_API.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -26,8 +25,9 @@ namespace ArcanoPizza_API.Controllers
             _context = context;
         }
 
-        // ================= USUARIOS =================
-        // (Tus métodos de usuarios se mantienen igual)
+        // ==========================================
+        // SECCIÓN: USUARIOS
+        // ==========================================
 
         [HttpGet("usuarios")]
         public async Task<IActionResult> GetUsuarios()
@@ -114,9 +114,11 @@ namespace ArcanoPizza_API.Controllers
             usuario.Telefono = dto.Telefono;
             usuario.Rol = dto.Tipo;
             usuario.Activo = dto.Activo;
+            usuario.UpdatedAt = DateTime.UtcNow;
 
             var actualizado = await _repo.ActualizarUsuarioAsync(usuario);
             if (actualizado == null) return StatusCode(500, "No se pudo actualizar el usuario");
+
             return NoContent();
         }
 
@@ -125,7 +127,10 @@ namespace ArcanoPizza_API.Controllers
         {
             var usuario = await _repo.GetUsuarioByIdAsync(id);
             if (usuario == null) return NotFound();
+
             usuario.Activo = !usuario.Activo;
+            usuario.UpdatedAt = DateTime.UtcNow;
+
             await _repo.ActualizarUsuarioAsync(usuario);
             return NoContent();
         }
@@ -135,11 +140,13 @@ namespace ArcanoPizza_API.Controllers
         {
             var eliminado = await _repo.EliminarUsuarioAsync(id);
             if (!eliminado) return NotFound();
+
             return NoContent();
         }
 
-        // ================= PRODUCTOS =================
-        // (Tus métodos de productos se mantienen igual)
+        // ==========================================
+        // SECCIÓN: PRODUCTOS
+        // ==========================================
 
         [HttpGet("productos")]
         public async Task<IActionResult> GetProductos()
@@ -153,7 +160,8 @@ namespace ArcanoPizza_API.Controllers
                 ImagenURL = p.ImagenURL,
                 PrecioBase = p.PrecioBase,
                 Activo = p.Activo,
-                IdCategoria = p.FkIdCategoria
+                IdCategoria = p.FkIdCategoria,
+                Ingredientes = p.Ingredientes
             });
             return Ok(response);
         }
@@ -162,6 +170,7 @@ namespace ArcanoPizza_API.Controllers
         public async Task<IActionResult> CrearProducto([FromBody] ProductoAdminDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+
             var producto = new Producto
             {
                 Nombre = dto.Nombre,
@@ -169,7 +178,8 @@ namespace ArcanoPizza_API.Controllers
                 ImagenURL = dto.ImagenURL,
                 PrecioBase = dto.Precio,
                 Activo = true,
-                FkIdCategoria = 1,
+                FkIdCategoria = dto.FkIdCategoria,
+                Ingredientes = dto.Ingredientes,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -183,8 +193,10 @@ namespace ArcanoPizza_API.Controllers
                 ImagenURL = creado.ImagenURL,
                 PrecioBase = creado.PrecioBase,
                 Activo = creado.Activo,
-                IdCategoria = creado.FkIdCategoria
+                IdCategoria = creado.FkIdCategoria,
+                Ingredientes = creado.Ingredientes
             };
+
             return Ok(response);
         }
 
@@ -193,33 +205,33 @@ namespace ArcanoPizza_API.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var existente = await _repo.GetProductoByIdAsync(id);
-            if (existente is null) return NotFound();
+            var producto = await _repo.GetProductoByIdAsync(id);
+            if (producto == null) return NotFound();
 
-            existente.Nombre = dto.Nombre;
-            existente.Descripcion = dto.Descripcion;
-            existente.ImagenURL = dto.ImagenURL;
-            existente.PrecioBase = dto.Precio;
-            existente.Activo = dto.Activo;
-            existente.FkIdCategoria = dto.FkIdCategoria;
-            existente.UpdatedAt = DateTime.UtcNow;
+            producto.Nombre = dto.Nombre;
+            producto.Descripcion = dto.Descripcion;
+            producto.PrecioBase = dto.Precio;
+            producto.Activo = dto.Activo;
+            producto.FkIdCategoria = dto.FkIdCategoria;
+            producto.Ingredientes = dto.Ingredientes;
+            producto.ImagenURL = dto.ImagenURL;
+            producto.UpdatedAt = DateTime.UtcNow;
 
-            var actualizado = await _repo.ActualizarProductoAsync(existente);
-            if (actualizado is null) return StatusCode(500, "No se pudo actualizar el producto");
+            var actualizado = await _repo.ActualizarProductoAsync(producto);
+            if (actualizado == null) return StatusCode(500, "No se pudo actualizar el producto");
             return NoContent();
         }
 
         [HttpPatch("productos/{id:int}/toggle")]
         public async Task<IActionResult> ToggleProducto(int id)
         {
-            var existente = await _repo.GetProductoByIdAsync(id);
-            if (existente is null) return NotFound();
+            var producto = await _repo.GetProductoByIdAsync(id);
+            if (producto == null) return NotFound();
 
-            existente.Activo = !existente.Activo;
-            existente.UpdatedAt = DateTime.UtcNow;
+            producto.Activo = !producto.Activo;
+            producto.UpdatedAt = DateTime.UtcNow;
 
-            var actualizado = await _repo.ActualizarProductoAsync(existente);
-            if (actualizado is null) return StatusCode(500, "No se pudo actualizar el producto");
+            await _repo.ActualizarProductoAsync(producto);
             return NoContent();
         }
 
@@ -231,37 +243,36 @@ namespace ArcanoPizza_API.Controllers
             return NoContent();
         }
 
-        // ================= DASHBOARD =================
+        // ==========================================
+        // SECCIÓN: DASHBOARD (MÉTRICAS)
+        // ==========================================
 
         [HttpGet("dashboard")]
         public async Task<ActionResult<DashboardDto>> ObtenerMetricasDashboard()
         {
             try
             {
-                // 1. Ajustamos el reloj al horario de Sonora (UTC -7)
                 var horaLocalSonora = DateTime.UtcNow.AddHours(-7);
-
-                // Obtenemos las 00:00:00 y las 23:59:59 de HOY en Sonora
                 var inicioHoyLocal = horaLocalSonora.Date;
                 var finHoyLocal = inicioHoyLocal.AddDays(1).AddTicks(-1);
 
-                // 2. Convertimos esos límites locales de nuevo a UTC para buscar en la base de datos
-                // (porque tus fechas CreatedAt están guardadas en UTC)
                 var inicioHoyUTC = inicioHoyLocal.AddHours(7);
                 var finHoyUTC = finHoyLocal.AddHours(7);
 
                 var pedidosHoy = await _context.Pedidos
                     .Include(p => p.PedidosItem)
                     .ThenInclude(i => i.Producto)
-                    // 🔥 Usamos los límites corregidos con la zona horaria
                     .Where(p => p.CreatedAt >= inicioHoyUTC && p.CreatedAt <= finHoyUTC)
                     .ToListAsync();
 
                 var dashboard = new DashboardDto
                 {
-                    VentasHoy = pedidosHoy.Where(p => p.Estado != "Cancelado" && p.Estado != "Rechazado").Sum(p => p.Total),
+                    VentasHoy = pedidosHoy
+                        .Where(p => p.Estado != "Cancelado" && p.Estado != "Rechazado")
+                        .Sum(p => p.Total),
 
-                    PedidosActivos = pedidosHoy.Count(p => p.Estado == "Pendiente" || p.Estado == "En Preparacion"),
+                    PedidosActivos = pedidosHoy
+                        .Count(p => p.Estado == "Pendiente" || p.Estado == "En Preparacion"),
 
                     ProductosVendidos = pedidosHoy
                         .Where(p => p.Estado != "Cancelado")
@@ -277,7 +288,6 @@ namespace ArcanoPizza_API.Controllers
                         .Take(5)
                         .ToList(),
 
-                    // 🔥 CORRECCIÓN EXTRA: Agrupamos la hora forzando la hora de Sonora
                     PedidosPorHora = pedidosHoy
                         .GroupBy(p => p.CreatedAt.AddHours(-7).Hour)
                         .Select(g => new PedidosHoraDto

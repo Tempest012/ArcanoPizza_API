@@ -99,7 +99,6 @@ public class PedidosController : ControllerBase
         if (detalle is null)
             return Problem("No se pudo crear el pedido.");
 
-        // Evita InvalidOperationException si el enrutador no resuelve CreatedAtAction.
         var location = $"/api/Pedidos/{detalle.IdPedido}";
         return Created(location, detalle);
     }

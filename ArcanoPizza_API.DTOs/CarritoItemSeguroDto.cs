@@ -14,3 +14,5 @@ namespace ArcanoPizza_API.DTOs
         public decimal Precio { get; set; }
     }
 }
+//cambio de cesar/cliente: Agregamos el nuevo campo Precio para que el backend pueda calcular el total correctamente, ya que el precio puede variar según el tamaño de la pizza.
+//Subiendo otra vez por si las dudas
