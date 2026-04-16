@@ -26,6 +26,7 @@ public class ArcanoPizzaDbContext : DbContext
     public DbSet<Extra> Extras => Set<Extra>();
     public DbSet<PedidoItemExtra> PedidosItemExtras => Set<PedidoItemExtra>();
     public DbSet<Promocion> Promociones => Set<Promocion>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -69,6 +70,24 @@ public class ArcanoPizzaDbContext : DbContext
                 .WithMany(u => u.Direcciones)
                 .HasForeignKey(x => x.FkIdUsuario)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AuditLog>(e =>
+        {
+            e.ToTable("audit_logs");
+            e.HasKey(x => x.IdAuditLog);
+            e.Property(x => x.Nivel).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Categoria).HasMaxLength(50).IsRequired();
+            e.Property(x => x.Mensaje).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.Ip).HasMaxLength(45);
+            e.Property(x => x.MetodoHttp).HasMaxLength(10);
+            e.Property(x => x.Ruta).HasMaxLength(2048);
+            e.Property(x => x.Detalle).HasMaxLength(4000);
+            e.HasIndex(x => x.OcurrioEn);
+            e.HasOne(x => x.Usuario)
+                .WithMany(u => u.AuditLogs)
+                .HasForeignKey(x => x.FkIdUsuario)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // promociones
