@@ -28,6 +28,7 @@ builder.Services.AddOptions<JwtOptions>()
 builder.Services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // Autenticación JWT (OWASP: Gestión de Sesiones Seguras)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -181,6 +182,7 @@ if (app.Environment.IsDevelopment())
 
 // Autenticación y autorización
 app.UseAuthentication();
+app.UseMiddleware<AuditLogMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
