@@ -1,4 +1,4 @@
-﻿using ArcanoPizza_API.Data.Interface;
+using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,9 +23,10 @@ namespace ArcanoPizza_API.Controllers
             try
             {
                 var productos = await _productoRepository.GetAllAsync();
+                var productosActivos = productos.Where(p => p.Activo);
 
                 // Mapeo manual siguiendo los nombres de tu DbContext
-                var resultado = productos.Select(p => new ProductoDto
+                var resultado = productosActivos.Select(p => new ProductoDto
                 {
                     Id = p.IdProducto,
                     Nombre = p.Nombre,
