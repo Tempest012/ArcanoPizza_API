@@ -32,10 +32,10 @@ public class PedidosController : ControllerBase
                 p.IdPedido,
                 p.Estado,
                 p.Total,
-                p.CreatedAt, // Esto caerá en 'Creado'
+                p.TimeStamp ?? p.CreatedAt,
                 p.TipoEntrega,
                 p.Promocion?.Titulo,
-                p.MetodoPago // Esto caerá en el nuevo 'MetodoPago' que agregamos
+                p.MetodoPago
             )).ToList();
 
         return Ok(dto);
