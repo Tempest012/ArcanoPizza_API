@@ -81,6 +81,18 @@ public class PedidoRepository : IPedidoRepository
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Pedido>> GetAsignadosARepartidorAsync(int repartidorId, CancellationToken ct)
+    {
+        return await _context.Pedidos
+            .AsNoTracking()
+            .Include(p => p.Usuario)
+            .Include(p => p.Direccion)
+            .Include(p => p.PedidosItem).ThenInclude(pi => pi.Producto)
+            .Where(p => p.FkIdRepartidor == repartidorId)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+    }
+
     public async Task<bool> ActualizarEstadoAsync(int idPedido, string nuevoEstado, CancellationToken ct)
     {
         var pedido = await _context.Pedidos.FindAsync(new object[] { idPedido }, ct);

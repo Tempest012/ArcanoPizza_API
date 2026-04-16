@@ -48,6 +48,7 @@ public record DireccionCrearDto(string Calle, string Colonia, string CodigoPosta
 public record PedidoDashboardDto(
     string Id,
     string Estado,
+    string TipoEntrega,
     bool Urgente,
     string HoraRecibido,
     string HoraEntrega,
@@ -69,3 +70,7 @@ public record ProductoResumenDto(
     string? Nota,
     string Ingredientes
 );
+
+// El DTO que coincidirá exactamente con tu interfaz de Angular
+public record EmpleadoResumenDto(int IdUsuario, string NombreUsuario);
+public record AsignarRepartidorRequest(int RepartidorId);
