@@ -1,5 +1,6 @@
 namespace ArcanoPizza_API.Model;
 
+
 public class Pedido
 {
     public int IdPedido { get; set; }

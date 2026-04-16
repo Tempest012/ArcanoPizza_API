@@ -213,5 +213,19 @@ public class ArcanoPizzaDbContext : DbContext
                 .HasForeignKey(x => x.FkIdExtra)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // 1. Relación: Pedido -> Cliente (Usuario)
+        modelBuilder.Entity<Pedido>()
+            .HasOne(p => p.Usuario)
+            .WithMany(u => u.Pedidos)
+            .HasForeignKey(p => p.FkIdUsuario)
+            .OnDelete(DeleteBehavior.Restrict); // Evita que si borras un usuario se borren los pedidos automáticamente
+
+        // 2. Relación: Pedido -> Repartidor (Usuario)
+        modelBuilder.Entity<Pedido>()
+            .HasOne(p => p.Repartidor)
+            .WithMany(u => u.PedidosComoRepartidor)
+            .HasForeignKey(p => p.FkIdRepartidor)
+            .OnDelete(DeleteBehavior.SetNull); // Si borras un empleado, el pedido se queda, pero sin repartidor asignado
     }
 }

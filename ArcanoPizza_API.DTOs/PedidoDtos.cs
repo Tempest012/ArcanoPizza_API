@@ -69,3 +69,7 @@ public record ProductoResumenDto(
     string? Nota,
     string Ingredientes
 );
+
+// El DTO que coincidirá exactamente con tu interfaz de Angular
+public record EmpleadoResumenDto(int IdUsuario, string NombreUsuario);
+public record AsignarRepartidorRequest(int RepartidorId);
