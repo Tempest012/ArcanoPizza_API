@@ -36,7 +36,7 @@ public class ExtrasController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<ActionResult<ExtraResponseDto>> Create([FromBody] ExtraCreateDto dto, CancellationToken ct)
     {
         var extra = new Extra
@@ -54,7 +54,7 @@ public class ExtrasController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<ActionResult> Update(int id, [FromBody] ExtraUpdateDto dto, CancellationToken ct)
     {
         var extra = await _extraRepository.GetByIdAsync(id, ct);
@@ -71,7 +71,7 @@ public class ExtrasController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<ActionResult> Delete(int id, CancellationToken ct)
     {
         var extra = await _extraRepository.GetByIdAsync(id, ct);

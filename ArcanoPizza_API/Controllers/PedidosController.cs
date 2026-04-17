@@ -112,7 +112,7 @@ public class PedidosController : ControllerBase
 
     // GET: api/Pedidos/dashboard
     [HttpGet("dashboard")]
-    [Authorize(Roles = "Empleado,Administrador")]
+    [Authorize(Roles = "Empleado,Administrador,Tecnico")]
     public async Task<ActionResult<IReadOnlyList<PedidoDashboardDto>>> GetDashboard(CancellationToken ct)
     {
         // 1. Obtenemos todos los pedidos activos (sin filtrar por UsuarioId)
@@ -180,7 +180,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPatch("{id:int}/estado")]
-    [Authorize(Roles = "Empleado,Administrador,Repartidor")]
+    [Authorize(Roles = "Empleado,Administrador,Tecnico,Repartidor")]
     public async Task<IActionResult> ActualizarEstado(int id, [FromBody] string nuevoEstado, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(nuevoEstado)) return BadRequest(new { mensaje = "El estado no puede estar vacío." });
@@ -222,7 +222,7 @@ public class PedidosController : ControllerBase
 
     // PATCH: api/Pedidos/{id}/asignar-repartidor
     [HttpPatch("{id:int}/asignar-repartidor")]
-    [Authorize(Roles = "Empleado,Administrador")]
+    [Authorize(Roles = "Empleado,Administrador,Tecnico")]
     public async Task<IActionResult> AsignarRepartidor(int id, [FromBody] AsignarRepartidorRequest request, CancellationToken ct)
     {
         var pedido = await _context.Pedidos.FindAsync(new object[] { id }, ct);

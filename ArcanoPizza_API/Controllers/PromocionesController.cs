@@ -26,7 +26,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpGet("admin")]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<ActionResult<IEnumerable<PromocionResponseDto>>> GetAllAdmin(CancellationToken ct)
     {
         var lista = await _promociones.FindAsync(_ => true, ct);
@@ -45,7 +45,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<ActionResult<PromocionResponseDto>> Create([FromBody] PromocionCreateDto dto, CancellationToken ct)
     {
         if (!Enum.IsDefined(typeof(TipoVigenciaPromocion), dto.TipoVigencia))
@@ -79,7 +79,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<ActionResult> Update(int id, [FromBody] PromocionUpdateDto dto, CancellationToken ct)
     {
         var p = await _promociones.GetByIdAsync(id, ct);
@@ -123,7 +123,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<ActionResult> Delete(int id, CancellationToken ct)
     {
         var p = await _promociones.GetByIdAsync(id, ct);
