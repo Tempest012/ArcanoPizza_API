@@ -27,6 +27,12 @@ public class GlobalExceptionHandlerMiddleware : IExceptionHandler
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // Señal para el audit log: guardar un resumen seguro del error en BD (sin stack trace).
+        var safeMsg = exception.Message ?? string.Empty;
+        if (safeMsg.Length > 800)
+            safeMsg = safeMsg[..800];
+        httpContext.Items["AuditLog:ExceptionSummary"] = $"{exception.GetType().Name}: {safeMsg}";
+
         // Log de seguridad (OWASP A09): registrar eventos de error sin exponer datos sensibles
         _logger.LogError(exception, "Error no controlado en {Method} {Path}. RequestId: {RequestId}",
             httpContext.Request.Method,

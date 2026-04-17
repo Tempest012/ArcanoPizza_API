@@ -1,4 +1,5 @@
 using ArcanoPizza_API.Services;
+using System.Diagnostics;
 
 namespace ArcanoPizza_API.Middleware;
 
@@ -13,14 +14,19 @@ public sealed class AuditLogMiddleware
 
     public async Task InvokeAsync(HttpContext context, IAuditLogService auditLogService)
     {
+        var sw = Stopwatch.StartNew();
         await _next(context);
+        sw.Stop();
 
         if (!ShouldLog(context))
             return;
 
         try
         {
-            await auditLogService.WriteHttpRequestAsync(context, context.RequestAborted);
+            await auditLogService.WriteHttpRequestAsync(
+                context,
+                duracionMs: (int)Math.Min(int.MaxValue, sw.ElapsedMilliseconds),
+                cancellationToken: context.RequestAborted);
         }
         catch
         {

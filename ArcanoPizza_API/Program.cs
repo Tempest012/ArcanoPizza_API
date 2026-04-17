@@ -8,6 +8,7 @@ using ArcanoPizza_API.Options;
 using ArcanoPizza_API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -29,6 +30,9 @@ builder.Services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddOptions<AuditLogRetentionOptions>()
+    .Bind(builder.Configuration.GetSection(AuditLogRetentionOptions.SectionName));
+builder.Services.AddHostedService<AuditLogRetentionService>();
 
 // Autenticación JWT (OWASP: Gestión de Sesiones Seguras)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -84,10 +88,23 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Soporte para reverse proxies (IP real / esquema) cuando aplica
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Importante: en Azure/App Services/NGINX suele ser necesario limpiar restricciones por redes desconocidas.
+    // Se asume despliegue detrás de proxy administrado; ajusta si necesitas allowlist.
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
-builder.Services.AddSecurity(builder.Configuration);
+
+builder.Services.AddSecurity(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
+
+// Forwarded headers lo más temprano posible
+app.UseForwardedHeaders();
 
 if (app.Environment.IsProduction())
 {
@@ -167,7 +184,10 @@ app.UseCors("Frontend");
 
 // Seguridad y protección
 app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseRateLimiter();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseRateLimiter();
+}
 
 // E. Entorno de Desarrollo (Swagger)
 

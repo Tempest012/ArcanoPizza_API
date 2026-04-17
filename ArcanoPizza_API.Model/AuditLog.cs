@@ -9,9 +9,12 @@ public class AuditLog
     public string Mensaje { get; set; } = string.Empty;
     public int? FkIdUsuario { get; set; }
     public string? Ip { get; set; }
+    public string? UserAgent { get; set; }
     public string? MetodoHttp { get; set; }
     public string? Ruta { get; set; }
     public int? CodigoEstado { get; set; }
+    public int? DuracionMs { get; set; }
+    public string? TraceId { get; set; }
     public string? Detalle { get; set; }
 
     public Usuario? Usuario { get; set; }

@@ -80,9 +80,13 @@ public class ArcanoPizzaDbContext : DbContext
             e.Property(x => x.Categoria).HasMaxLength(50).IsRequired();
             e.Property(x => x.Mensaje).HasMaxLength(2000).IsRequired();
             e.Property(x => x.Ip).HasMaxLength(45);
+            e.Property(x => x.UserAgent).HasMaxLength(512);
             e.Property(x => x.MetodoHttp).HasMaxLength(10);
             e.Property(x => x.Ruta).HasMaxLength(2048);
+            e.Property(x => x.TraceId).HasMaxLength(64);
             e.Property(x => x.Detalle).HasMaxLength(4000);
+            e.HasIndex(x => x.Nivel);
+            e.HasIndex(x => x.CodigoEstado);
             e.HasIndex(x => x.OcurrioEn);
             e.HasOne(x => x.Usuario)
                 .WithMany(u => u.AuditLogs)

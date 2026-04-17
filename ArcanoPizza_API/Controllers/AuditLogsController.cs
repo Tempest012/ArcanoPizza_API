@@ -25,6 +25,11 @@ public class AuditLogsController : ControllerBase
         [FromQuery] DateTime? desde = null,
         [FromQuery] DateTime? hasta = null,
         [FromQuery] string? categoria = null,
+        [FromQuery] string? nivel = null,
+        [FromQuery] int? statusCode = null,
+        [FromQuery] string? metodoHttp = null,
+        [FromQuery] string? usuario = null,
+        [FromQuery] string? q = null,
         CancellationToken cancellationToken = default)
     {
         page = Math.Max(1, page);
@@ -40,6 +45,33 @@ public class AuditLogsController : ControllerBase
         {
             var cat = categoria.Trim();
             query = query.Where(x => x.Categoria == cat);
+        }
+        if (!string.IsNullOrWhiteSpace(nivel))
+        {
+            var n = nivel.Trim();
+            query = query.Where(x => x.Nivel == n);
+        }
+        if (statusCode.HasValue)
+            query = query.Where(x => x.CodigoEstado == statusCode.Value);
+        if (!string.IsNullOrWhiteSpace(metodoHttp))
+        {
+            var m = metodoHttp.Trim();
+            query = query.Where(x => x.MetodoHttp == m);
+        }
+        if (!string.IsNullOrWhiteSpace(usuario))
+        {
+            var u = usuario.Trim();
+            query = query.Where(x =>
+                (x.FkIdUsuario != null && x.FkIdUsuario.ToString() == u) ||
+                (x.Usuario != null && x.Usuario.Correo != null && EF.Functions.ILike(x.Usuario.Correo, $"%{u}%")));
+        }
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var needle = q.Trim();
+            query = query.Where(x =>
+                EF.Functions.ILike(x.Mensaje, $"%{needle}%")
+                || (x.Ruta != null && EF.Functions.ILike(x.Ruta, $"%{needle}%"))
+                || (x.Detalle != null && EF.Functions.ILike(x.Detalle, $"%{needle}%")));
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -61,9 +93,13 @@ public class AuditLogsController : ControllerBase
             IdUsuario = x.FkIdUsuario,
             CorreoUsuario = x.Usuario?.Correo,
             Ip = x.Ip,
+            UserAgent = x.UserAgent,
             MetodoHttp = x.MetodoHttp,
             Ruta = x.Ruta,
             CodigoEstado = x.CodigoEstado,
+            DuracionMs = x.DuracionMs,
+            TraceId = x.TraceId,
+            Detalle = x.Detalle,
         }).ToList();
 
         return Ok(new PagedAuditLogsResponseDto
