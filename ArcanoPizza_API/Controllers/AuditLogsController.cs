@@ -28,6 +28,7 @@ public class AuditLogsController : ControllerBase
         [FromQuery] string? nivel = null,
         [FromQuery] int? statusCode = null,
         [FromQuery] string? metodoHttp = null,
+        [FromQuery] string? ip = null,
         [FromQuery] string? usuario = null,
         [FromQuery] string? q = null,
         CancellationToken cancellationToken = default)
@@ -57,6 +58,11 @@ public class AuditLogsController : ControllerBase
         {
             var m = metodoHttp.Trim();
             query = query.Where(x => x.MetodoHttp == m);
+        }
+        if (!string.IsNullOrWhiteSpace(ip))
+        {
+            var ipNeedle = ip.Trim();
+            query = query.Where(x => x.Ip != null && EF.Functions.ILike(x.Ip, $"%{ipNeedle}%"));
         }
         if (!string.IsNullOrWhiteSpace(usuario))
         {
