@@ -16,7 +16,10 @@ public class AuditLogService : IAuditLogService
         _logger = logger;
     }
 
-    public async Task WriteHttpRequestAsync(HttpContext context, CancellationToken cancellationToken = default)
+    public async Task WriteHttpRequestAsync(
+        HttpContext context,
+        int? duracionMs = null,
+        CancellationToken cancellationToken = default)
     {
         var path = context.Request.Path.Value ?? string.Empty;
         var method = context.Request.Method;
@@ -31,6 +34,21 @@ public class AuditLogService : IAuditLogService
         var nivel = status >= 500 ? "Error" : status >= 400 ? "Warning" : "Info";
         var ruta = path.Length > 2048 ? path[..2048] : path;
         var metodo = method.Length > 10 ? method[..10] : method;
+        var traceId = context.TraceIdentifier;
+        if (traceId.Length > 64)
+            traceId = traceId[..64];
+
+        var ua = context.Request.Headers.UserAgent.ToString();
+        if (!string.IsNullOrWhiteSpace(ua) && ua.Length > 512)
+            ua = ua[..512];
+
+        string? detalle = null;
+        if (context.Items.TryGetValue("AuditLog:ExceptionSummary", out var summaryObj)
+            && summaryObj is string summary
+            && !string.IsNullOrWhiteSpace(summary))
+        {
+            detalle = summary.Length > 4000 ? summary[..4000] : summary;
+        }
 
         var log = new AuditLog
         {
@@ -40,9 +58,13 @@ public class AuditLogService : IAuditLogService
             Mensaje = $"{method} {path} -> {status}",
             FkIdUsuario = userId,
             Ip = context.Connection.RemoteIpAddress?.ToString(),
+            UserAgent = string.IsNullOrWhiteSpace(ua) ? null : ua,
             MetodoHttp = metodo,
             Ruta = string.IsNullOrEmpty(ruta) ? null : ruta,
             CodigoEstado = status,
+            DuracionMs = duracionMs,
+            TraceId = traceId,
+            Detalle = detalle,
         };
 
         _db.AuditLogs.Add(log);
