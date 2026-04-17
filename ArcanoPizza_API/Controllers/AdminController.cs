@@ -1,4 +1,4 @@
-﻿using ArcanoPizza_API.Data;
+using ArcanoPizza_API.Data;
 using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.DTOs;
 using ArcanoPizza_API.Model;
@@ -13,7 +13,7 @@ namespace ArcanoPizza_API.Controllers
 {
     [ApiController]
     [Route("api/admin")]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Tecnico")]
     public class AdminController : ControllerBase
     {
         private readonly IAdminRepository _repo;

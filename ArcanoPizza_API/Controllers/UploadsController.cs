@@ -7,7 +7,7 @@ namespace ArcanoPizza_API.Controllers;
 
 [ApiController]
 [Route("api/uploads")]
-[Authorize(Roles = "Administrador")]
+[Authorize(Roles = "Administrador,Tecnico")]
 public class UploadsController : ControllerBase
 {
     private readonly IConfiguration _config;
