@@ -26,16 +26,17 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -f "ArcanoPizza_API/ArcanoPizza_API.csproj" ]]; then
-            echo "PROJECT_PATH=ArcanoPizza_API/ArcanoPizza_API.csproj" >> "$GITHUB_ENV"
+            PROJECT_PATH="ArcanoPizza_API/ArcanoPizza_API.csproj"
           elif [[ -f "ArcanoPizza_API/ArcanoPizza_API/ArcanoPizza_API.csproj" ]]; then
-            echo "PROJECT_PATH=ArcanoPizza_API/ArcanoPizza_API/ArcanoPizza_API.csproj" >> "$GITHUB_ENV"
+            PROJECT_PATH="ArcanoPizza_API/ArcanoPizza_API/ArcanoPizza_API.csproj"
           elif [[ -f "ArcanoPizza_API.csproj" ]]; then
-            echo "PROJECT_PATH=ArcanoPizza_API.csproj" >> "$GITHUB_ENV"
+            PROJECT_PATH="ArcanoPizza_API.csproj"
           else
             echo "No se encontró ArcanoPizza_API.csproj en rutas conocidas." >&2
             ls -la
             exit 1
           fi
+          echo "PROJECT_PATH=$PROJECT_PATH" >> "$GITHUB_ENV"
           echo "Usando PROJECT_PATH=$PROJECT_PATH"
 
       - name: Restore
