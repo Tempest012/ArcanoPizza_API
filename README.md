@@ -144,64 +144,97 @@ Es una **API REST** para un sistema de pedidos de pizza. Permite gestionar produ
 | **Entidad (Model)** | Clase que representa una tabla en la base de datos (ej: `Usuario`, `Pedido`, `Extra`). |
 | **DTO** | Objeto de transferencia de datos: la forma en que la API recibe y devuelve información (diferente a las entidades internas). |
 | **Controller** | Clase que recibe las peticiones HTTP y decide qué hacer con ellas (GET, POST, PUT, DELETE). |
-| **Repository** | Clase que encapsula el acceso a la base de datos. Los controllers no hablan con la BD directamente, sino a través de repositorios. |
+| **Repository** | Contrato + clase que encapsula el acceso a la BD por agregado/tabla. Los controllers **no** usan repositorios directamente; hablan con **servicios de aplicación** (`I*Service`). |
+| **Servicio de aplicación (`I*Service`)** | Contrato en `IServices/`, implementación en `Services/`. Orquesta repositorios, reglas de negocio, integraciones (Stripe, Cloudinary) y devuelve DTOs. |
 | **DbContext** | Componente de Entity Framework Core que representa la conexión con la base de datos y las tablas. |
 | **Migración** | Archivo que describe cambios en el esquema de la BD (crear tablas, agregar columnas, etc.). |
 
 ---
 
-## Estructura general: las 4 capas
+## Arquitectura actual (proyectos y responsabilidades)
 
-El proyecto está dividido en **4 proyectos** (capas):
+El código está dividido en **cuatro proyectos** de biblioteca más el host web:
 
 ```
-Cliente (Postman, frontend, etc.)
-        │
-        ▼
-┌─────────────────────────────┐
-│  ArcanoPizza_API            │  ← Entrada HTTP (Controllers, Program.cs)
-│  "La puerta de entrada"      │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌─────────────────────────────┐
-│  ArcanoPizza_API.Data       │  ← Acceso a la base de datos (Repositories, DbContext)
-│  "Habla con PostgreSQL"    │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌─────────────────────────────┐
-│  ArcanoPizza_API.Model      │  ← Entidades del negocio (Producto, Usuario, Pedido...)
-│  "Las tablas y relaciones"  │
-└─────────────────────────────┘
-
-        ArcanoPizza_API.DTOs   ← Contratos de entrada/salida (Request/Response)
-        "Lo que entra y sale por HTTP"
+                    Cliente (Angular, Postman, integraciones)
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  ArcanoPizza_API — Host ASP.NET Core (.NET 10)                       │
+│  • Punto de entrada: Program.cs (pipeline HTTP mínimo)               │
+│  • Extensions: AddArcanoPizzaCore (app), AddSecurity (OWASP)         │
+│  • Controllers: solo HTTP, autorización y mapeo a códigos/DTOs       │
+│  • Servicios propios del host: AuthService, JwtTokenService,        │
+│    AuditLogService, middleware de auditoría y cabeceras               │
+└─────────────────────────────────────────┬───────────────────────────┘
+                                            │
+                                            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  ArcanoPizza_API.Data                                               │
+│  • PostgresConfiguration.AddData() → DbContext, repos, servicios     │
+│  • Interface/        → I*Repository                                 │
+│  • IServices/        → contratos I*Service + AuthOutcome              │
+│  • Services/         → implementaciones (*Service) + Models/        │
+│  • Repositories/     → acceso EF Core                                │
+│  • Migrations/       → esquema PostgreSQL                             │
+└───────────────────────────┬───────────────────────────────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
+┌───────────────────────┐       ┌───────────────────────┐
+│ ArcanoPizza_API.Model │       │ ArcanoPizza_API.DTOs  │
+│ Entidades EF / dominio│       │ Request/Response HTTP │
+└───────────────────────┘       └───────────────────────┘
 ```
 
-| Proyecto | Rol | Contiene |
-|----------|-----|----------|
-| **ArcanoPizza_API** | Web API | `Program.cs`, Controllers, configuración, `appsettings` |
-| **ArcanoPizza_API.Data** | Persistencia | DbContext, Repositories, Migraciones, configuración de PostgreSQL |
-| **ArcanoPizza_API.Model** | Dominio | Entidades (clases que mapean a tablas) |
-| **ArcanoPizza_API.DTOs** | Contratos | DTOs para request y response |
+| Proyecto | Rol |
+|----------|-----|
+| **ArcanoPizza_API** | Expone la API REST, JWT, CORS, logging, rate limiting (no dev), OpenAPI/Swagger en desarrollo. |
+| **ArcanoPizza_API.Data** | Persistencia, repositorios y **casos de uso** compartidos (servicios que implementan `IServices`). |
+| **ArcanoPizza_API.Model** | Entidades mapeadas a tablas. |
+| **ArcanoPizza_API.DTOs** | Contratos de entrada/salida; la API no expone entidades. |
+
+**Por qué `IAuthService` vive en Data pero `AuthService` en la API:** el contrato (`IAuthService`, `AuthOutcome`) lo consumen los controllers y está en `ArcanoPizza_API.Data.IServices`; la implementación usa JWT y `PasswordHasher` del stack web y reside en `ArcanoPizza_API/Services`, registrada en `AddArcanoPizzaCore`.
 
 ---
 
-## Flujo de una petición HTTP
+## Flujo de arranque (`Program.cs`)
 
-Ejemplo: el cliente hace `GET /api/Extras` para obtener todos los extras.
+1. **`builder.Services.AddArcanoPizzaCore(configuration)`**  
+   Registra la capa de datos (`AddData`), opciones JWT, `PasswordHasher`, `IJwtTokenService`, `IAuthService` → `AuthService`, auditoría (servicio + retención en background), autenticación JWT Bearer, autorización, controllers, OpenAPI, HTTP logging, CORS (`Frontend`), forwarded headers.
+
+2. **`builder.Services.AddSecurity(configuration, environment)`**  
+   Manejador global de excepciones, Problem Details, antiforgery, HSTS y **rate limiting** (solo fuera de Development).
+
+3. **Pipeline HTTP** (orden relevante):  
+   `UseForwardedHeaders` → HTTPS/HSTS según entorno → `UseExceptionHandler` → `UseHttpLogging` → `UseRequestTraceLogging` (incluye trazas de login sin contraseña) → `UseCors("Frontend")` → `SecurityHeadersMiddleware` → `UseRateLimiter` (no dev) → OpenAPI + Swagger UI (solo dev) → `UseAuthentication` → `AuditLogMiddleware` → `UseAuthorization` → `MapControllers`.
+
+---
+
+## Flujo de una petición HTTP (ejemplo)
+
+Ejemplo: `GET /api/Extras` (listado público o según endpoint).
 
 ```
-1. Cliente → GET /api/Extras
-2. ExtrasController recibe la petición
-3. Controller llama a IExtraRepository.GetAllAsync()
-4. ExtraRepository (implementación) consulta ArcanoPizzaDbContext
-5. DbContext ejecuta la query en PostgreSQL
-6. Los datos vuelven: DbContext → Repository → Controller
-7. Controller convierte las entidades Extra en ExtraResponseDto
-8. Cliente recibe JSON con los extras
+1. Cliente envía la petición (headers, JWT si aplica).
+2. Pasa por middleware: logging, CORS, cabeceras de seguridad, autenticación/autorización, auditoría.
+3. ExtrasController recibe la petición y delega en IExtraService.
+4. ExtraService usa IExtraRepository (y si aplica DbContext) para leer datos.
+5. Los datos se proyectan a DTOs (p. ej. ExtraResponseDto).
+6. El controller devuelve el código HTTP y el JSON.
 ```
+
+Otros flujos típicos:
+
+| Área | Ruta / rol | Piezas principales |
+|------|------------|---------------------|
+| Auth | `/api/Auth/*` | `AuthController` → `IAuthService` / `AuthService` → repos usuario/refresh token |
+| Pedidos | `/api/Pedidos` | `IPedidosService`, `IPedidoCreacionService`, `IPedidoRepository` |
+| Pagos Stripe | `/api/Pagos` | `IStripeCheckoutService` (Stripe.net + creación/confirmación de pedido) |
+| Catálogo | `/api/Productos` | `IProductoCatalogoService` |
+| Admin | `/api/Admin` | `IAdminService` + `IAdminRepository` |
+| Subidas | `/api/uploads` | `ICloudinarySignatureService` (firma server-side) |
+| Auditoría (técnico) | `/api/audit-logs` | `IAuditLogsQueryService` |
 
 ---
 
@@ -225,38 +258,41 @@ Ejemplo: el cliente hace `GET /api/Extras` para obtener todos los extras.
 
 | Archivo/Carpeta | ¿Para qué sirve? |
 |-----------------|------------------|
-| `Program.cs` | Punto de entrada: configura la app, registra servicios (incluida la capa Data) y define el pipeline HTTP. |
-| `Controllers/` | Controllers que exponen los endpoints. Ejemplo: `ExtrasController` maneja `/api/Extras`. |
-| `appsettings.json` | Configuración base. La cadena de conexión está vacía por seguridad. |
-| `appsettings.Development.json` | Configuración adicional solo en desarrollo (logging, etc.). |
-| `Properties/launchSettings.json` | Perfiles de ejecución (cómo se lanza la app en debug). |
-| `ArcanoPizza_API.http` | Archivo para probar endpoints desde el IDE. |
+| `Program.cs` | Punto de entrada: `AddArcanoPizzaCore` + `AddSecurity` y el pipeline HTTP (sección **Flujo de arranque** más arriba). |
+| `Extensions/` | `ArcanoPizzaCoreExtensions` (registro de servicios de aplicación), `ServiceCollectionExtensions` (`AddSecurity`). |
+| `Middleware/` | Cabeceras de seguridad, auditoría de solicitudes, manejo global de excepciones. |
+| `Controllers/` | REST: `Auth`, `Admin`, `AuditLogs`, `Direcciones`, `Extras`, `Pagos`, `Pedidos`, `Productos`, `Promociones`, `Uploads`. |
+| `Services/` | Implementaciones del host: `AuthService`, `JwtTokenService`, servicios de auditoría (los contratos `IAuthService` están en `ArcanoPizza_API.Data.IServices`). |
+| `Options/` | Opciones fuertemente tipadas (`JwtOptions`, retención de audit logs, validadores). |
+| `Helpers/` | Extensiones sobre claims y utilidades usadas por controllers. |
+| `appsettings.json` | Configuración base; secretos vía User Secrets o variables de entorno. |
+| `appsettings.Development.json` | Ajustes solo en desarrollo. |
+| `Properties/launchSettings.json` | Perfiles de ejecución. |
+| `ArcanoPizza_API.http` | Ejemplos de llamadas HTTP desde el IDE. |
 
 ---
 
-### Proyecto `ArcanoPizza_API.Data` (Persistencia)
+### Proyecto `ArcanoPizza_API.Data` (persistencia y casos de uso)
 
-Aquí vive todo lo relacionado con la base de datos.
+Incluye **DbContext**, **repositorios**, **contratos de servicios** (`IServices`) e **implementaciones** (`Services`).
 
 #### Carpetas principales
 
-| Carpeta | Propósito | Uso actual |
-|---------|-----------|------------|
-| `Repositories/` | Implementaciones que acceden a la BD. `Repository<T>` es genérico; `ExtraRepository` es específico para extras. | En uso: `Repository.cs`, `ExtraRepository.cs` |
-| `Interface/` | Contratos (interfaces) que definen qué puede hacer cada repositorio. Los controllers dependen de estas interfaces, no de las implementaciones. | En uso: `IRepository.cs`, `IExtraRepository.cs` |
-| `Migrations/` | Archivos de migraciones de EF Core. Cada uno describe un cambio en el esquema de la BD (crear/modificar tablas). | En uso: migración inicial del esquema |
-| **`Helpers/`** | Utilidades compartidas de la capa Data (extensiones, métodos auxiliares, etc.). | Vacía por ahora; reservada para futuro. |
-| **`Exceptions/`** | Excepciones propias de la capa Data cuando algo falle (ej: entidad no encontrada, conflicto de datos). | Vacía por ahora; reservada para futuro. |
-| **`Filters/`** | Filtros o abstracciones para consultas complejas (ej: paginación, filtros reutilizables). | Vacía por ahora; reservada para futuro. |
-| **`AuthorizationPolicies/`** | Políticas de autorización ligadas a la capa de datos (si en el futuro se necesitan aquí). | Vacía por ahora; reservada para futuro. |
+| Carpeta | Propósito |
+|---------|-----------|
+| `Interface/` | Interfaces `I*Repository`. |
+| `IServices/` | Interfaces `I*Service`, `AuthOutcome` y contratos de servicios. Namespace: `ArcanoPizza_API.Data.IServices`. |
+| `Services/` | Implementaciones de servicios e integraciones (Stripe, Cloudinary); `Models/` para tipos auxiliares (p. ej. firma Cloudinary). Namespace: `ArcanoPizza_API.Data.Services`. |
+| `Repositories/` | Acceso a datos vía EF Core. |
+| `Migrations/` | Migraciones aplicadas al esquema PostgreSQL. |
 
 #### Archivos clave
 
 | Archivo | ¿Qué hace? |
-|---------|-------------|
-| `ArcanoPizzaDbContext.cs` | Define las tablas (`DbSet<>`), el mapeo y las relaciones. Es el "puente" entre el código y PostgreSQL. |
-| `PostgresConfiguration.cs` | Registra el DbContext con la cadena de conexión y los repositorios. Se llama desde `Program.cs` con `AddData()`. |
-| `PostgresConnectionString.cs` | Convierte una URL tipo `postgresql://user:pass@host/db` al formato que espera Npgsql. |
+|---------|------------|
+| `ArcanoPizzaDbContext.cs` | `DbSet<>`, mapeos y relaciones. |
+| `PostgresConfiguration.cs` | `AddData`: registra `DbContext`, repositorios y parejas `I*Service` → implementación. Usa `DATABASE_URL` o `ConnectionStrings:DefaultConnection`. Lo invoca `AddArcanoPizzaCore` en el host. |
+| `PostgresConnectionString.cs` | Normaliza URLs `postgresql://...` al formato Npgsql. |
 
 ---
 
@@ -353,8 +389,9 @@ dotnet ef database update --project ArcanoPizza_API.Data --startup-project Arcan
 | Área | Convención |
 |------|------------|
 | **No versionar secretos** | Usar User Secrets o `DATABASE_URL`; nunca credenciales en `appsettings.json` subido a Git. |
-| **Controllers** | Solo HTTP: routing, validación básica y mapeo DTO ↔ entidad. |
-| **Repositories** | Todo el acceso a datos pasa por repositorios; los controllers no usan DbContext directamente. |
+| **Controllers** | Solo HTTP: autorización, delegación en `I*Service` y mapeo a códigos/DTOs. |
+| **Servicios (`IServices` / `Services`)** | Reglas de negocio, orquestación y proyección a DTOs; pueden usar repositorios y `DbContext`. |
+| **Repositories** | Persistencia; los controllers no inyectan repositorios ni `DbContext` directamente. |
 | **DTOs** | Nunca exponer entidades. Siempre mapear a DTOs de request/response. |
 | **Fechas** | Usar `DateTime.UtcNow` para consistencia. |
 | **Async** | Métodos que hacen I/O usan `async/await` y reciben `CancellationToken` donde aplique. |
@@ -390,8 +427,9 @@ dotnet ef database update --project ArcanoPizza_API.Data --startup-project Arcan
 | Commits | `tipo(ámbito): descripción` | `feat(extras): add PATCH support` |
 | Controllers | `{Entidad}Controller` | `ExtrasController` |
 | DTOs | `{Entidad}{Create,Update,Response}Dto` | `ExtraCreateDto`, `ExtraResponseDto` |
-| Repositories | `I{Entidad}Repository` / `{Entidad}Repository` | `IExtraRepository`, `ExtraRepository` |
-| Rutas API | `/api/{Entidad}` | `/api/Extras` |
+| Servicios (contrato / impl.) | `I{Nombre}Service` en `IServices/` · `{Nombre}Service` en `Services/` | `IExtraService`, `ExtraService` |
+| Repositories | `I{Entidad}Repository` en `Interface/` · `{Entidad}Repository` en `Repositories/` | `IExtraRepository`, `ExtraRepository` |
+| Rutas API | `/api/{Entidad}` o rutas dedicadas | `/api/Extras`, `/api/audit-logs` |
 
 ### Estilo de código
 
@@ -414,16 +452,16 @@ La API aplica medidas para cubrir las vulnerabilidades del [OWASP Top 10:2025](h
 
 | Categoría OWASP | Medidas implementadas |
 |-----------------|------------------------|
-| **A01 - Broken Access Control** | Estructura JWT configurada. Aplicar `[Authorize]` en endpoints sensibles cuando el login esté implementado. |
-| **A02 - Security Misconfiguration** | Cabeceras de seguridad (X-Frame-Options, X-Content-Type-Options, CSP, HSTS), Swagger solo en desarrollo. |
-| **A03 - Software Supply Chain** | Usar paquetes NuGet oficiales, mantener dependencias actualizadas, revisar alertas de Dependabot. |
-| **A04 - Cryptographic Failures** | HTTPS forzado, `sslmode=require` en PostgreSQL. Para contraseñas: usar bcrypt/Argon2 (pendiente en módulo Usuario). |
-| **A05 - Injection** | EF Core con consultas parametrizadas, validación en DTOs (`[Required]`, `[MaxLength]`, `[Range]`), rate limiting. |
-| **A06 - Insecure Design** | Arquitectura en capas, separación API/Data/Model/DTOs, principio de mínimo privilegio. |
-| **A07 - Authentication Failures** | JWT con `Jwt:SigningKey` (User Secrets o variables de entorno). Rate limiting global y política `auth`. |
-| **A08 - Software/Data Integrity** | No usar scripts o paquetes sin firmar. Configurar verificación de integridad en CI/CD. |
-| **A09 - Security Logging** | Excepciones logueadas con `TraceId` sin datos sensibles. Extensible a auditoría de accesos. |
-| **A10 - Mishandling of Exceptions** | Manejador global de excepciones: respuestas genéricas en producción, sin stack traces al cliente. |
+| **A01 - Broken Access Control** | JWT + `[Authorize]` y roles en endpoints administración/técnico/pedidos según corresponda. |
+| **A02 - Security Misconfiguration** | Cabeceras (`SecurityHeadersMiddleware`), HSTS en producción, OpenAPI/Swagger solo en desarrollo. |
+| **A03 - Software Supply Chain** | Paquetes NuGet oficiales; mantener dependencias y revisar Dependabot. |
+| **A04 - Cryptographic Failures** | HTTPS; `sslmode=require` en PostgreSQL; contraseñas con `PasswordHasher` (ASP.NET Identity). JWT firmado con clave configurada (`Jwt:SigningKey`). |
+| **A05 - Injection** | EF Core parametrizado; validación en DTOs; rate limiting fuera de Development. |
+| **A06 - Insecure Design** | Capas API / Data / Model / DTOs; servicios de aplicación entre controller y persistencia. |
+| **A07 - Authentication Failures** | JWT Bearer; límites de rate limiting (`auth` / global) en entornos no desarrollo. |
+| **A08 - Software/Data Integrity** | Revisar cadena de suministro en CI/CD. |
+| **A09 - Security Logging** | `GlobalExceptionHandler`, HTTP logging, `AuditLogMiddleware`, trazas de request sin secretos (login solo registra correo). |
+| **A10 - Mishandling of Exceptions** | Problem Details; sin detalles internos al cliente en producción. |
 
 ### Configurar JWT
 
@@ -437,6 +475,7 @@ dotnet user-secrets set "Jwt:SigningKey" "tu-clave-secreta-de-al-menos-32-caract
 
 - **CRUD**: Create, Read, Update, Delete (crear, leer, actualizar, eliminar).
 - **EF Core**: Entity Framework Core, ORM para .NET que mapea objetos a tablas de la BD.
-- **Inyección de dependencias**: El framework crea y pasa las dependencias (repositorios, DbContext) automáticamente a los controllers.
+- **`IServices` / `Services` (Data)**: Carpeta y namespace de **contratos** de casos de uso (`I*Service`) frente a **implementaciones** (`*Service`) en el proyecto `ArcanoPizza_API.Data`.
+- **Inyección de dependencias**: El contenedor DI registra interfaces y resuelve implementaciones en controllers y servicios (p. ej. `IExtraService` → `ExtraService`).
 - **Npgsql**: Proveedor de PostgreSQL para .NET.
 - **ORM**: Object-Relational Mapping; traduce entre objetos en código y filas en la BD.

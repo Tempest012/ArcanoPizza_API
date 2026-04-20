@@ -1,12 +1,11 @@
-using ArcanoPizza_API.Data;
 using ArcanoPizza_API.Data.Interface;
+using ArcanoPizza_API.Data.IServices;
 using ArcanoPizza_API.DTOs;
-using ArcanoPizza_API.Helpers;
 using ArcanoPizza_API.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace ArcanoPizza_API.Services;
+namespace ArcanoPizza_API.Data.Services;
 
 public class PedidoCreacionService : IPedidoCreacionService
 {
@@ -53,7 +52,7 @@ public class PedidoCreacionService : IPedidoCreacionService
             return (null, errMetodo);
 
         var tipoNorm = dto.TipoEntrega.Trim();
-        var recoger = TipoEntregaHelper.EsRecogerEnLocal(tipoNorm);
+        var recoger = string.Equals(tipoNorm, "Recoger", StringComparison.OrdinalIgnoreCase);
 
         Model.Direccion? direccion = null;
         if (!recoger)
@@ -76,7 +75,7 @@ public class PedidoCreacionService : IPedidoCreacionService
         if (dto.PromocionId is { } pid)
         {
             promocion = await _promocionRepository.GetByIdAsync(pid, ct);
-            if (promocion is null || !PromocionVigencia.EstaVigente(promocion, DateTime.UtcNow))
+            if (promocion is null || !EstaVigente(promocion, DateTime.UtcNow))
                 return (null, "La promoción no existe o no está vigente.");
         }
 
@@ -168,6 +167,21 @@ public class PedidoCreacionService : IPedidoCreacionService
         return (MapDetalle(detalle), null);
     }
 
+    private static bool EstaVigente(Promocion p, DateTime utcNow)
+    {
+        if (!p.Activo)
+            return false;
+
+        return p.TipoVigencia switch
+        {
+            TipoVigenciaPromocion.FechaHasta => p.FechaValidaHasta is not null
+                && utcNow.Date <= p.FechaValidaHasta.Value.Date,
+            TipoVigenciaPromocion.DiaSemanaRecurrente => p.DiaSemanaRecurrente is not null
+                && (int)utcNow.DayOfWeek == p.DiaSemanaRecurrente.Value,
+            _ => false,
+        };
+    }
+
     private static PedidoDetalleDto MapDetalle(Pedido pedido)
     {
         var lineas = pedido.PedidosItem.Select(i => new PedidoLineaDetalleDto(
@@ -212,3 +226,4 @@ public class PedidoCreacionService : IPedidoCreacionService
         return (null, "Método de pago no válido. Usá «Efectivo» u omití el campo.");
     }
 }
+
