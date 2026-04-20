@@ -32,5 +32,11 @@ public class Promocion
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    /// <summary>
+    /// Producto "combo" vendible asociado a la promoción (para poder agregar la promoción al carrito como 1 ítem).
+    /// </summary>
+    public int? FkIdProductoCombo { get; set; }
+    public Producto? ProductoCombo { get; set; }
+
     public ICollection<Pedido> Pedidos { get; set; } = new List<Pedido>();
 }

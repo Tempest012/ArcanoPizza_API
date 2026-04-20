@@ -1,6 +1,6 @@
 using ArcanoPizza_API.DTOs;
 
-namespace ArcanoPizza_API.Services;
+namespace ArcanoPizza_API.Data.IServices;
 
 public interface IPedidoCreacionService
 {

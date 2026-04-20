@@ -1,6 +1,8 @@
 using ArcanoPizza_API.Data.Interface;
 
+using ArcanoPizza_API.Data.IServices;
 using ArcanoPizza_API.Data.Repositories;
+using ArcanoPizza_API.Data.Services;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -52,6 +54,7 @@ public static class PostgresConfiguration
         services.AddScoped<IAdminRepository, AdminRepository>();
 
         services.AddScoped<IPromocionRepository, PromocionRepository>();
+        services.AddScoped<IProductoRepository, ProductoRepository>();
 
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
@@ -60,6 +63,18 @@ public static class PostgresConfiguration
         services.AddScoped<IPedidoRepository, PedidoRepository>();
 
         services.AddScoped<IDireccionRepository, DireccionRepository>();
+
+        services.AddScoped<ICloudinarySignatureService, CloudinarySignatureService>();
+        services.AddScoped<IPromocionService, PromocionService>();
+        services.AddScoped<IAuditLogsQueryService, AuditLogsQueryService>();
+        services.AddScoped<IPedidoCreacionService, PedidoCreacionService>();
+        services.AddScoped<IStripeCheckoutService, StripeCheckoutService>();
+        services.AddScoped<IPedidosService, PedidosService>();
+
+        services.AddScoped<IExtraService, ExtraService>();
+        services.AddScoped<IProductoCatalogoService, ProductoCatalogoService>();
+        services.AddScoped<IDireccionService, DireccionService>();
+        services.AddScoped<IAdminService, AdminService>();
 
 
 
