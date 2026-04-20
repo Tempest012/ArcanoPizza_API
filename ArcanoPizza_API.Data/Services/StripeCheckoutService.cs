@@ -73,7 +73,12 @@ public class StripeCheckoutService : IStripeCheckoutService
         foreach (var item in body.Items)
         {
             var productoReal = productosEnBaseDeDatos.FirstOrDefault(p => p.IdProducto == item.ProductoId);
-            if (productoReal is null) continue;
+            if (productoReal is null)
+                return (null, $"Producto {item.ProductoId} no existe.");
+            if (!productoReal.Activo)
+                return (null, $"Producto {item.ProductoId} no disponible.");
+            if (item.Cantidad <= 0)
+                return (null, "Las cantidades deben ser mayores a cero.");
 
             decimal precioUsar = item.Precio > 0 ? item.Precio : productoReal.PrecioBase;
             decimal precioConIva = precioUsar * 1.16m;
@@ -207,7 +212,13 @@ public class StripeCheckoutService : IStripeCheckoutService
 
         var (detalle, error) = await _pedidoCreacion.CrearAsync(userIdPedido, crearDto, session.Id, ct);
         if (error is not null)
+        {
+            // Si Stripe ya cobró pero el pedido no se puede crear por datos actuales (p. ej. producto desactivado),
+            // es mejor reportarlo como conflicto para que el frontend muestre un estado de atención/reintento.
+            if (error.Contains("no disponible", StringComparison.OrdinalIgnoreCase))
+                return (null, error, 409);
             return (null, error, 400);
+        }
         if (detalle is null)
             return (null, "No se pudo crear el pedido.", 500);
 

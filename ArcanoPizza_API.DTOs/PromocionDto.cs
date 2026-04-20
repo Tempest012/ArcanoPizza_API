@@ -4,6 +4,7 @@ namespace ArcanoPizza_API.DTOs;
 
 public record PromocionResponseDto(
     int IdPromocion,
+    int? ProductoComboId,
     string Titulo,
     string? Descripcion,
     string? Contenido,

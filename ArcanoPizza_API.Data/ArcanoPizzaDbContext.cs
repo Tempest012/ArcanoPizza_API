@@ -107,6 +107,11 @@ public class ArcanoPizzaDbContext : DbContext
             e.Property(x => x.PrecioPromocional).HasPrecision(10, 2);
             e.Property(x => x.TipoVigencia).HasConversion<int>();
             e.HasIndex(x => x.Activo);
+            e.HasOne(x => x.ProductoCombo)
+                .WithMany()
+                .HasForeignKey(x => x.FkIdProductoCombo)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // pedidos

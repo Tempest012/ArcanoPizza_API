@@ -2,16 +2,19 @@ using ArcanoPizza_API.Data.Interface;
 using ArcanoPizza_API.Data.IServices;
 using ArcanoPizza_API.DTOs;
 using ArcanoPizza_API.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace ArcanoPizza_API.Data.Services;
 
 public class PromocionService : IPromocionService
 {
     private readonly IPromocionRepository _promociones;
+    private readonly ArcanoPizzaDbContext _db;
 
-    public PromocionService(IPromocionRepository promociones)
+    public PromocionService(IPromocionRepository promociones, ArcanoPizzaDbContext db)
     {
         _promociones = promociones;
+        _db = db;
     }
 
     public async Task<IReadOnlyList<PromocionResponseDto>> GetActivasAsync(CancellationToken ct)
@@ -51,6 +54,36 @@ public class PromocionService : IPromocionService
             return (null, "DiaSemanaRecurrente es requerido para promoción recurrente.");
 
         var ahora = DateTime.UtcNow;
+
+        // Crear (o reutilizar) la categoría "Promociones" para el producto combo vendible.
+        var categoria = await _db.CategoriasProducto.FirstOrDefaultAsync(c => c.Nombre == "Promociones", ct);
+        if (categoria is null)
+        {
+            categoria = new CategoriaProducto
+            {
+                Nombre = "Promociones",
+                CreatedAt = ahora,
+                UpdatedAt = ahora,
+            };
+            _db.CategoriasProducto.Add(categoria);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        var productoCombo = new Producto
+        {
+            Nombre = dto.Titulo,
+            Descripcion = dto.Descripcion,
+            Ingredientes = dto.Contenido,
+            ImagenURL = dto.ImagenURL,
+            PrecioBase = dto.PrecioPromocional,
+            Activo = dto.Activo,
+            FkIdCategoria = categoria.IdCategoriasProductos,
+            CreatedAt = ahora,
+            UpdatedAt = ahora,
+        };
+        _db.Productos.Add(productoCombo);
+        await _db.SaveChangesAsync(ct);
+
         var entity = new Promocion
         {
             Titulo = dto.Titulo,
@@ -64,7 +97,8 @@ public class PromocionService : IPromocionService
             DiaSemanaRecurrente = tipo == TipoVigenciaPromocion.DiaSemanaRecurrente ? dto.DiaSemanaRecurrente : null,
             Activo = dto.Activo,
             CreatedAt = ahora,
-            UpdatedAt = ahora
+            UpdatedAt = ahora,
+            FkIdProductoCombo = productoCombo.IdProducto,
         };
 
         var created = await _promociones.AddAsync(entity, ct);
@@ -81,6 +115,24 @@ public class PromocionService : IPromocionService
 
         p.UpdatedAt = DateTime.UtcNow;
         await _promociones.UpdateAsync(p, ct);
+
+        // Si existe producto combo asociado, mantenerlo sincronizado.
+        if (p.FkIdProductoCombo is { } prodId && prodId > 0)
+        {
+            var prod = await _db.Productos.FirstOrDefaultAsync(x => x.IdProducto == prodId, ct);
+            if (prod is not null)
+            {
+                if (dto.Titulo is not null) prod.Nombre = dto.Titulo;
+                if (dto.Descripcion is not null) prod.Descripcion = dto.Descripcion;
+                if (dto.Contenido is not null) prod.Ingredientes = dto.Contenido;
+                if (dto.ImagenURL is not null) prod.ImagenURL = dto.ImagenURL;
+                if (dto.PrecioPromocional.HasValue) prod.PrecioBase = dto.PrecioPromocional.Value;
+                if (dto.Activo.HasValue) prod.Activo = dto.Activo.Value;
+                prod.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+
         return (true, null);
     }
 
@@ -88,6 +140,18 @@ public class PromocionService : IPromocionService
     {
         var p = await _promociones.GetByIdAsync(id, ct);
         if (p is null) return false;
+
+        // No eliminar producto combo (puede estar referenciado por pedidos). Solo desactivarlo.
+        if (p.FkIdProductoCombo is { } prodId && prodId > 0)
+        {
+            var prod = await _db.Productos.FirstOrDefaultAsync(x => x.IdProducto == prodId, ct);
+            if (prod is not null)
+            {
+                prod.Activo = false;
+                prod.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
 
         await _promociones.DeleteAsync(p, ct);
         return true;
@@ -124,6 +188,7 @@ public class PromocionService : IPromocionService
 
         return new PromocionResponseDto(
             p.IdPromocion,
+            p.FkIdProductoCombo,
             p.Titulo,
             p.Descripcion,
             p.Contenido,
