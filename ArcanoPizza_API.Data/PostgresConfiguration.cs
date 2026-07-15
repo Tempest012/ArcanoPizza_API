@@ -63,6 +63,7 @@ public static class PostgresConfiguration
         services.AddScoped<IPedidoRepository, PedidoRepository>();
 
         services.AddScoped<IDireccionRepository, DireccionRepository>();
+        services.AddScoped<IMesaRepository, MesaRepository>();
 
         services.AddScoped<ICloudinarySignatureService, CloudinarySignatureService>();
         services.AddScoped<IPromocionService, PromocionService>();
@@ -70,6 +71,8 @@ public static class PostgresConfiguration
         services.AddScoped<IPedidoCreacionService, PedidoCreacionService>();
         services.AddScoped<IStripeCheckoutService, StripeCheckoutService>();
         services.AddScoped<IPedidosService, PedidosService>();
+        services.AddScoped<IMesasService, MesasService>();
+        services.AddScoped<ISalonService, SalonService>();
 
         services.AddScoped<IExtraService, ExtraService>();
         services.AddScoped<IProductoCatalogoService, ProductoCatalogoService>();

@@ -27,6 +27,8 @@ public class ArcanoPizzaDbContext : DbContext
     public DbSet<PedidoItemExtra> PedidosItemExtras => Set<PedidoItemExtra>();
     public DbSet<Promocion> Promociones => Set<Promocion>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Mesa> Mesas => Set<Mesa>();
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -146,6 +148,44 @@ public class ArcanoPizzaDbContext : DbContext
                 .HasForeignKey(x => x.FkIdRepartidor)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.Mesa)
+                .WithMany(m => m.Pedidos)
+                .HasForeignKey(x => x.FkIdMesa)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.Operador)
+                .WithMany(u => u.PedidosComoOperador)
+                .HasForeignKey(x => x.FkIdOperador)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // mesas
+        modelBuilder.Entity<Mesa>(e =>
+        {
+            e.ToTable("mesas");
+            e.HasKey(x => x.IdMesa);
+            e.Property(x => x.Numero).IsRequired();
+            e.HasIndex(x => x.Numero).IsUnique();
+            e.Property(x => x.Estado).HasMaxLength(50).IsRequired();
+        });
+
+        // notificaciones
+        modelBuilder.Entity<Notificacion>(e =>
+        {
+            e.ToTable("notificaciones");
+            e.HasKey(x => x.IdNotificacion);
+            e.Property(x => x.Mensaje).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => x.FkIdUsuario);
+            e.HasIndex(x => x.Fecha);
+            e.HasOne(x => x.Usuario)
+                .WithMany(u => u.Notificaciones)
+                .HasForeignKey(x => x.FkIdUsuario)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Pedido)
+                .WithMany(p => p.Notificaciones)
+                .HasForeignKey(x => x.FkIdPedido)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // pagos

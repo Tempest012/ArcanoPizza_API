@@ -17,6 +17,8 @@ public class Usuario
     public ICollection<Direccion> Direcciones { get; set; } = new List<Direccion>();
     public ICollection<Pedido> Pedidos { get; set; } = new List<Pedido>();
     public ICollection<Pedido> PedidosComoRepartidor { get; set; } = new List<Pedido>();
+    public ICollection<Pedido> PedidosComoOperador { get; set; } = new List<Pedido>();
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+    public ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
 }
